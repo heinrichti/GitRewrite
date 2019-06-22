@@ -20,19 +20,25 @@ namespace GitRewrite.IO
             throw new ArgumentException(objectHash + " is not a blob.");
         }
 
+        public static readonly object ReadPackFilesLock = new object();
+        public static volatile List<(string IdxFile, string PackFile)> PackFiles;
+
         public static IEnumerable<(string IdxFile, string PackFile)> GetPackFiles(string repositoryPath)
         {
-            return Directory.GetFiles(Path.Combine(repositoryPath, "objects/pack"), "*.idx",
-                SearchOption.TopDirectoryOnly).Select(idxFile => (idxFile, idxFile.Substring(0, idxFile.Length - 3) + "pack"));
-        }
+            if (PackFiles != null)
+                return PackFiles;
 
-        public static IEnumerable<(string IdxFile, string PackFile)> GetPackFilesEnumerator(string repositoryPath)
-        {
-            foreach (var idxFile in Directory.EnumerateFiles(Path.Combine(repositoryPath, "objects/pack"), "*.idx",
-                SearchOption.TopDirectoryOnly))
-                yield return (idxFile, idxFile.Substring(0, idxFile.Length - 3) + "pack");
-        }
+            lock (ReadPackFilesLock)
+            {
+                if (PackFiles != null)
+                    return PackFiles;
 
+                PackFiles = Directory.GetFiles(Path.Combine(repositoryPath, "objects/pack"), "*.idx",
+                    SearchOption.TopDirectoryOnly).Select(idxFile => (idxFile, idxFile.Substring(0, idxFile.Length - 3) + "pack")).ToList();
+            }
+
+            return PackFiles;
+        }
 
         public static Commit GetCommit(string repositoryPath, ObjectHash hash)
         {
