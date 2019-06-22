@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using CommandLine;
+using CommandLine.Text;
 using GitRewrite.GitObjects;
 using GitRewrite.IO;
 using Commit = GitRewrite.GitObjects.Commit;
@@ -15,32 +18,43 @@ namespace GitRewrite
     {
         static void Main(string[] args)
         {
-            if (args.Length != 1)
-            { 
-                Console.WriteLine("Path missing");
-                return;
-            }
+            var parserResult = Parser.Default.ParseArguments<CommandLineOptions>(args);
+            //string helpText = HelpText.AutoBuild(parserResult);
+            parserResult.WithParsed(options =>
+            {
+                var optionsSet = 0;
+                optionsSet += options.FixTrees ? 1 : 0;
+                optionsSet += options.FilesToDelete.Any() ? 1 : 0;
+                optionsSet += options.RemoveEmptyCommits ? 1 : 0;
 
-            var vcsPath = args[0];
+                if (optionsSet != 1)
+                {
+                    Console.WriteLine("Cannot mix operations. Only choose one operation at a time (multiple file deletes are allowed).");
+                    Console.WriteLine("For available options see GitRewrite --help");
+                    return;
+                }
 
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
+                if (options.FixTrees)
+                {
+                    var defectiveCommits = FindCommitsWithDuplicateTreeEntries(options.RepositoryPath).ToList();
 
-            var defectiveCommits = FindCommitsWithDuplicateTreeEntries(vcsPath).ToList();
-
-            var rewrittenCommits = FixDefectiveCommits(vcsPath, defectiveCommits);
-            if (rewrittenCommits.Any())
-                Refs.Update(vcsPath, rewrittenCommits);
-
-            //rewrittenCommits = RemoveEmptyCommits(vcsPath);
-            //if (rewrittenCommits.Any())
-            //    Refs.Update(vcsPath, rewrittenCommits);
-
-            //var rewrittenCommits = RemoveFiles(vcsPath, new HashSet<string> { "Test.7z" });
-            //if (rewrittenCommits.Any())
-            //    Refs.Update(vcsPath, rewrittenCommits);
-
-            Console.WriteLine("Elapsed ms: " + stopwatch.ElapsedMilliseconds);
+                    var rewrittenCommits = FixDefectiveCommits(options.RepositoryPath, defectiveCommits);
+                    if (rewrittenCommits.Any())
+                        Refs.Update(options.RepositoryPath, rewrittenCommits);
+                }
+                else if (options.FilesToDelete.Any())
+                {
+                    var rewrittenCommits = RemoveFiles(options.RepositoryPath, new HashSet<string>(options.FilesToDelete));
+                    if (rewrittenCommits.Any())
+                        Refs.Update(options.RepositoryPath, rewrittenCommits);
+                }
+                else if (options.RemoveEmptyCommits)
+                {
+                    var rewrittenCommits = RemoveEmptyCommits(options.RepositoryPath);
+                    if (rewrittenCommits.Any())
+                        Refs.Update(options.RepositoryPath, rewrittenCommits);
+                }
+            });
         }
 
         public static ObjectHash WriteFixedTree(string vcsPath, Tree tree)
