@@ -67,7 +67,7 @@ namespace GitRewrite
                 return new Commit(hash, fileContent.AsSpan(contentIndex).ToArray());
 
             if (IsTree(fileContent))
-                return new Tree(hash, fileContent.AsSpan(contentIndex));
+                return new Tree(hash, fileContent.AsMemory(contentIndex));
 
             if (IsTag(fileContent)) 
                 return new Tag(hash, fileContent.AsMemory(contentIndex));

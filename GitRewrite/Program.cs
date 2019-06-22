@@ -58,7 +58,7 @@ namespace GitRewrite
 
                 var childTree = GitObjectFactory.ReadTree(vcsPath, treeLine.Hash);
                 var fixedTreeHash = WriteFixedTree(vcsPath, childTree);
-                resultingTreeLines.Add(new Tree.TreeLine(treeLine.Text, fixedTreeHash));
+                resultingTreeLines.Add(new Tree.TreeLine(treeLine.TextBytes, fixedTreeHash));
                 if (fixedTreeHash != childTree.Hash)
                     fixRequired = true;
             }
@@ -165,11 +165,11 @@ namespace GitRewrite
                 if (line.IsDirectory())
                 {
                     if (rewrittenTrees.TryGetValue(line.Hash, out var newHash))
-                        resultingLines.Add(new Tree.TreeLine(line.Text, newHash));
+                        resultingLines.Add(new Tree.TreeLine(line.TextBytes, newHash));
                     else
                     {
                         var newTreeHash = RemoveFileFromTree(vcsPath, line.Hash, filesToRemove, rewrittenTrees);
-                        resultingLines.Add(new Tree.TreeLine(line.Text, newTreeHash));
+                        resultingLines.Add(new Tree.TreeLine(line.TextBytes, newTreeHash));
                     }
                 }
                 else
