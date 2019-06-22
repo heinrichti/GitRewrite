@@ -349,3 +349,4 @@ healthchecksdb
 MigrationBackup/
 
 launchSettings.json
+published/

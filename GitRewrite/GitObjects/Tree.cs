@@ -100,6 +100,8 @@ namespace GitRewrite.GitObjects
 
             public ReadOnlyMemory<byte> TextBytes => _text;
 
+            public ReadOnlySpan<byte> FileNameBytes => _text.Span.Slice(7);
+
             public ObjectHash Hash { get; }
 
             public bool IsDirectory() => _text.Span[0] != '1';
