@@ -33,7 +33,7 @@ namespace GitRewrite
             else if (type == GitObjectType.Tag)
                 header = "tag " + contentBytes.Length + '\0';
             else if (type == GitObjectType.Tree)
-                header = "tag " + contentBytes.Length + '\0';
+                header = "tree " + contentBytes.Length + '\0';
             else if (type == GitObjectType.Blob)
                 header = "blob " + contentBytes.Length + '\0';
             else
