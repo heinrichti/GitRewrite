@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using GitRewrite.GitObjects;
 using GitRewrite.IO;
 using Commit = GitRewrite.GitObjects.Commit;
@@ -35,7 +36,7 @@ namespace GitRewrite
             //if (rewrittenCommits.Any())
             //    Refs.Update(vcsPath, rewrittenCommits);
 
-            //var rewrittenCommits = RemoveFiles(vcsPath, new HashSet<string> {"Test.7z"});
+            //var rewrittenCommits = RemoveFiles(vcsPath, new HashSet<string> { "Test.7z" });
             //if (rewrittenCommits.Any())
             //    Refs.Update(vcsPath, rewrittenCommits);
 
@@ -130,12 +131,12 @@ namespace GitRewrite
         public static Dictionary<ObjectHash, ObjectHash> RemoveFiles(string vcsPath, HashSet<string> filesToRemove)
         {
             var rewrittenCommits = new Dictionary<ObjectHash, ObjectHash>();
-            var rewrittenTrees = new Dictionary<ObjectHash, ObjectHash>();
+            var rewrittenTrees = new ConcurrentDictionary<ObjectHash, ObjectHash>();
 
             foreach (var commit in CommitWalker
                 .CommitsInOrder(vcsPath))
             {
-                var newTreeHash = RemoveFileFromTree(vcsPath, commit.TreeHash, filesToRemove, rewrittenTrees);
+                var newTreeHash = RemoveFileFromRootTree(vcsPath, commit.TreeHash, filesToRemove, rewrittenTrees);
                 var newCommit = Commit.GetSerializedCommitWithChangedTreeAndParents(commit, newTreeHash,
                     GetRewrittenParentHashes(commit.Parents, rewrittenCommits));
 
@@ -152,8 +153,60 @@ namespace GitRewrite
             return rewrittenCommits;
         }
 
+        private static ObjectHash RemoveFileFromRootTree(string vcsPath, ObjectHash treeHash,
+            HashSet<string> filesToRemove, ConcurrentDictionary<ObjectHash, ObjectHash> rewrittenTrees)
+        {
+            if (rewrittenTrees.TryGetValue(treeHash, out var rewrittenHash))
+                return rewrittenHash;
+
+            var tree = GitObjectFactory.ReadTree(vcsPath, treeHash);
+            var resultingLines = new ConcurrentQueue<(int, Tree.TreeLine)>();
+
+            int i = 0;
+
+            Parallel.ForEach(tree.Lines.Select(line => (ItemIndex: i++, line)),
+                new ParallelOptions {MaxDegreeOfParallelism = Environment.ProcessorCount},
+                line =>
+                {
+                    var rewrittenLine = RemovefileFromLine(vcsPath, line.line, filesToRemove, rewrittenTrees);
+                    if (rewrittenLine != null)
+                        resultingLines.Enqueue((line.ItemIndex, rewrittenLine));
+                });
+
+            var fixedTree = Tree.GetFixedTree(resultingLines.OrderBy(x => x.Item1).Select(x => x.Item2));
+            if (fixedTree.Hash != tree.Hash)
+                HashContent.WriteObject(vcsPath, fixedTree);
+
+            rewrittenTrees.TryAdd(treeHash, fixedTree.Hash);
+
+            return fixedTree.Hash;
+
+        }
+
+        private static Tree.TreeLine RemovefileFromLine(
+            string vcsPath,
+            Tree.TreeLine line, 
+            HashSet<string> filesToRemove,
+            ConcurrentDictionary<ObjectHash, ObjectHash> rewrittenTrees)
+        {
+            if (line.IsDirectory())
+            {
+                if (rewrittenTrees.TryGetValue(line.Hash, out var newHash))
+                    return new Tree.TreeLine(line.TextBytes, newHash);
+                
+                var newTreeHash = RemoveFileFromTree(vcsPath, line.Hash, filesToRemove, rewrittenTrees);
+                return new Tree.TreeLine(line.TextBytes, newTreeHash);
+
+            }
+
+            if (!filesToRemove.Contains(line.Text.Substring(7)))
+                return line;
+
+            return null;
+        }
+
         private static ObjectHash RemoveFileFromTree(string vcsPath, ObjectHash treeHash,
-            HashSet<string> filesToRemove, Dictionary<ObjectHash, ObjectHash> rewrittenTrees)
+            HashSet<string> filesToRemove, ConcurrentDictionary<ObjectHash, ObjectHash> rewrittenTrees)
         {
             if (rewrittenTrees.TryGetValue(treeHash, out var rewrittenHash))
                 return rewrittenHash;
@@ -183,7 +236,7 @@ namespace GitRewrite
             if (fixedTree.Hash != tree.Hash)
                 HashContent.WriteObject(vcsPath, fixedTree);
 
-            rewrittenTrees.Add(treeHash, fixedTree.Hash);
+            rewrittenTrees.TryAdd(treeHash, fixedTree.Hash);
 
             return fixedTree.Hash;
         }

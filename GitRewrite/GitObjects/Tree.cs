@@ -35,13 +35,13 @@ namespace GitRewrite.GitObjects
         public static byte[] GetSerializedObject(IReadOnlyList<TreeLine> treeLines)
         {
             // lines bestehen immer aus text + \0 + hash in bytes
-            var byteLines = new List<Tuple<byte[], byte[]>>();
+            var byteLines = new List<Tuple<ReadOnlyMemory<byte>, byte[]>>();
 
             foreach (var treeLine in treeLines)
             {
-                var textBytes = Encoding.UTF8.GetBytes(treeLine.Text);
+                var textBytes = treeLine.TextBytes;
                 var hashBytes = treeLine.Hash.Bytes;
-                byteLines.Add(new Tuple<byte[], byte[]>(textBytes, hashBytes));
+                byteLines.Add(new Tuple<ReadOnlyMemory<byte>, byte[]>(textBytes, hashBytes));
             }
 
             var bytesTotal = byteLines.Sum(x => x.Item1.Length + 1 + x.Item2.Length);
@@ -51,7 +51,8 @@ namespace GitRewrite.GitObjects
 
             foreach (var byteLine in byteLines)
             {
-                Array.Copy(byteLine.Item1, 0, result, bytesCopied, byteLine.Item1.Length);
+                var resultSpan = result.AsSpan(bytesCopied, byteLine.Item1.Length);
+                byteLine.Item1.Span.CopyTo(resultSpan);
                 bytesCopied += byteLine.Item1.Length;
                 result[bytesCopied++] = 0;
                 Array.Copy(byteLine.Item2, 0, result, bytesCopied, 20);
@@ -69,7 +70,7 @@ namespace GitRewrite.GitObjects
             return !treeLines.All(x => lines.Add(x.Text));
         }
 
-        public static Tree GetFixedTree(IReadOnlyList<TreeLine> treeLines)
+        public static Tree GetFixedTree(IEnumerable<TreeLine> treeLines)
         {
             var distinctTreeLines = new List<TreeLine>();
             var hashSet = new HashSet<string>();
@@ -102,6 +103,8 @@ namespace GitRewrite.GitObjects
             public ObjectHash Hash { get; }
 
             public bool IsDirectory() => _text.Span[0] != '1';
+
+            public override string ToString() => Hash + " " + Text;
         }
     }
 }
