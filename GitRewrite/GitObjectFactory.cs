@@ -89,7 +89,7 @@ namespace GitRewrite
 
             if (IsCommit(fileContent))
                 return new Commit(hash,
-                    fileContent.AsMemory(fileContent.AsSpan().Slice(7).IndexOf<byte>(0) + 8).ToArray());
+                    fileContent.AsMemory(fileContent.AsSpan(7).IndexOf<byte>(0) + 8).ToArray());
 
             throw new ArgumentException("Not a commit: " + hash);
         }
@@ -102,7 +102,8 @@ namespace GitRewrite
 
             var fileContent = HashContent.FromFile(repositoryPath, hash.ToString());
 
-            if (IsTree(fileContent)) return new Tree(hash, fileContent);
+            if (IsTree(fileContent)) return new Tree(hash, 
+                fileContent.AsMemory(fileContent.AsSpan(5).IndexOf<byte>(0) + 6));
 
             return null;
         }
