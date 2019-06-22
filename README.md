@@ -23,4 +23,5 @@ GitRewrite solves this problem by rewriting the trees by removing the duplicates
 GitRewrite C:/VCS/MyRepo --fix-trees
 ```
 
-GitRewrite was only tested on one repository, so there is a big chance that it might fail for you. Please let me know of any issues or feature requests, I will update the tool when I find the time for it. Pull requests very welcome! Still searching for a way to make this even faster, maybe some parallelization options that I have not thought about yet or faster file acces (while this should be pretty efficient already using memory mapped files)
+GitRewrite was only tested on one repository, so there is a big chance that it might fail for you. At the moment it will only work on windows because of the zlib library it is using (zlibnet). There may be other issues as well but this is the biggest blocker for letting it run on other systems.
+Please let me know of any issues or feature requests, I will update the tool when I find the time for it. Pull requests very welcome! Still searching for a way to make this even faster, maybe some parallelization options that I have not employed yet or faster file acces (while this should be pretty efficient already using memory mapped files)
