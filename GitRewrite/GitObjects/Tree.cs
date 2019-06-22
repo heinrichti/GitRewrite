@@ -7,24 +7,24 @@ namespace GitRewrite.GitObjects
 {
     public sealed class Tree : GitObjectBase
     {
-        public Tree(ObjectHash hash, ReadOnlySpan<byte> bytes) : base(hash, GitObjectType.Tree)
+        public Tree(ObjectHash hash, ReadOnlyMemory<byte> bytes) : base(hash, GitObjectType.Tree)
         {
-            var nullTerminatorIndex = IndexOf(bytes, '\0');
+            var nullTerminatorIndex = IndexOf(bytes.Span, '\0');
 
             var lines = new List<TreeLine>();
 
             while (nullTerminatorIndex > 0)
             {
-                var text = Encoding.UTF8.GetString(bytes.Slice(0, nullTerminatorIndex));
+                var textSpan = bytes.Slice(0, nullTerminatorIndex);
 
                 var lineHashInBytes = bytes.Slice(nullTerminatorIndex + 1, 20);
 
                 var objectHash = new ObjectHash(lineHashInBytes.ToArray());
 
-                lines.Add(new TreeLine(text, objectHash));
+                lines.Add(new TreeLine(textSpan, objectHash));
 
                 bytes = bytes.Slice(nullTerminatorIndex + 21);
-                nullTerminatorIndex = IndexOf(bytes, '\0');
+                nullTerminatorIndex = IndexOf(bytes.Span, '\0');
             }
 
             Lines = lines;
@@ -87,16 +87,21 @@ namespace GitRewrite.GitObjects
 
         public class TreeLine
         {
-            public TreeLine(string text, ObjectHash hash)
+            public TreeLine(ReadOnlyMemory<byte> text, ObjectHash hash)
             {
-                Text = text;
+                _text = text;
                 Hash = hash;
             }
 
-            public string Text { get; }
+            private readonly ReadOnlyMemory<byte> _text;
+
+            public string Text => Encoding.UTF8.GetString(_text.Span);
+
+            public ReadOnlyMemory<byte> TextBytes => _text;
+
             public ObjectHash Hash { get; }
 
-            public bool IsDirectory() => Text[0] != '1';
+            public bool IsDirectory() => _text.Span[0] != '1';
         }
     }
 }
