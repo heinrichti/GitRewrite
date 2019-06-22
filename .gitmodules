@@ -1,0 +1,3 @@
+[submodule "zlibnet"]
+	path = zlibnet
+	url = https://github.com/TimHeinrich/zlibnet.git
