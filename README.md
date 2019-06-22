@@ -22,3 +22,5 @@ GitRewrite solves this problem by rewriting the trees by removing the duplicates
 ```
 GitRewrite C:/VCS/MyRepo --fix-trees
 ```
+
+GitRewrite was only tested on one repository, so there is a big chance that it might fail for you. Please let me know of any issues or feature requests, I will update the tool when I find the time for it. Pull requests very welcome! Still searching for a way to make this even faster, maybe some parallelization options that I have not thought about yet or faster file acces (while this should be pretty efficient already using memory mapped files)
