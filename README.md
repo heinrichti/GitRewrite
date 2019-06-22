@@ -36,3 +36,13 @@ Instead of git gc --aggressive you might want to use something faster like git g
 ## Important notes
 GitRewrite was only tested on one repository, so there is a big chance that it might fail for you. At the moment it will only work on windows because of the zlib library it is using (zlibnet). There may be other issues as well but this is the biggest blocker for letting it run on other systems.
 Please let me know of any issues or feature requests, I will update the tool when I find the time for it. Pull requests very welcome! Still searching for a way to make this even faster, maybe some parallelization options that I have not employed yet or faster file acces (while this should be pretty efficient already using memory mapped files)
+
+## Build instructions
+Currently we are building with the preview of .NET Core 3.0, so the SDK should be installed.
+```
+git clone https://github.com/TimHeinrich/GitRewrite.git
+cd GitRewrite
+git submodule init
+git submodule update
+dotnet publish --self-contained -r win10-x64 -c Release 
+```
