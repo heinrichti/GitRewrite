@@ -9,12 +9,13 @@ namespace GitRewrite.Delete
 
         public FileDeleteStrategies(IEnumerable<string> filePatterns)
         {
-            // TODO currently only simple file name deletion possible, add wildcards and folders
             _strategies = new List<IFileDeleteStrategy>();
             foreach (var filePattern in filePatterns)
             {
                 if (filePattern[0] == '*')
                     _strategies.Add(new EndsWithDeletionStrategy(filePattern));
+                else if (filePattern[0] == '/')
+                    _strategies.Add(new ExactFileDeletionStrategy(filePattern));
                 else if (filePattern[filePattern.Length - 1] == '*')
                     _strategies.Add(new StartsWithDeletionStrategy(filePattern));
                 else 
@@ -22,11 +23,11 @@ namespace GitRewrite.Delete
             }
         }
 
-        public bool DeleteFile(in ReadOnlySpan<byte> fileName)
+        public bool DeleteFile(in ReadOnlySpan<byte> fileName, string currentPath)
         {
             foreach (var strategy in _strategies)
             {
-                if (strategy.DeleteFile(fileName))
+                if (strategy.DeleteFile(fileName, currentPath))
                     return true;
             }
 

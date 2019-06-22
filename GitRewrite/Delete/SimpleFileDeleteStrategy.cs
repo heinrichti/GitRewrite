@@ -9,7 +9,7 @@ namespace GitRewrite.Delete
 
         public SimpleFileDeleteStrategy(string fileName) => _fileName = Encoding.UTF8.GetBytes(fileName);
 
-        public bool DeleteFile(in ReadOnlySpan<byte> fileName)
+        public bool DeleteFile(in ReadOnlySpan<byte> fileName, string currentPath)
             => fileName.SequenceEqual(_fileName);
     }
 }
