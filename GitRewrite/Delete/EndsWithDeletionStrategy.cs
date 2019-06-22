@@ -10,6 +10,6 @@ namespace GitRewrite.Delete
         public EndsWithDeletionStrategy(string filePattern) =>
             _endBytes = Encoding.UTF8.GetBytes(filePattern.Substring(1));
 
-        public bool DeleteFile(in ReadOnlySpan<byte> fileName) => fileName.EndsWith(_endBytes);
+        public bool DeleteFile(in ReadOnlySpan<byte> fileName, string currentPath) => fileName.EndsWith(_endBytes);
     }
 }

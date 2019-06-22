@@ -100,7 +100,9 @@ namespace GitRewrite.GitObjects
 
             public ReadOnlyMemory<byte> TextBytes => _text;
 
-            public ReadOnlySpan<byte> FileNameBytes => _text.Span.Slice(7);
+            public ReadOnlySpan<byte> FileNameBytes => _text.Span.Slice(_text.Span.IndexOf((byte)' ') + 1);
+
+            public string GetFileName() => Encoding.UTF8.GetString(FileNameBytes);
 
             public ObjectHash Hash { get; }
 

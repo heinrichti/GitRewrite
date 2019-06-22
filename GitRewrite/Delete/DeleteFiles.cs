@@ -8,7 +8,7 @@ using GitRewrite.IO;
 
 namespace GitRewrite.Delete
 {
-    class DeleteFiles
+    internal class DeleteFiles
     {
         public static void Run(string repositoryPath, IEnumerable<string> filesToDelete)
         {
@@ -18,7 +18,9 @@ namespace GitRewrite.Delete
                 Refs.Update(repositoryPath, rewrittenCommits);
         }
 
-        public static Dictionary<ObjectHash, ObjectHash> RemoveFiles(string vcsPath, FileDeleteStrategies filesToRemove)
+        public static Dictionary<ObjectHash, ObjectHash> RemoveFiles(
+            string vcsPath,
+            FileDeleteStrategies filesToRemove)
         {
             var rewrittenCommits = new Dictionary<ObjectHash, ObjectHash>();
             var rewrittenTrees = new ConcurrentDictionary<ObjectHash, ObjectHash>();
@@ -43,8 +45,10 @@ namespace GitRewrite.Delete
             return rewrittenCommits;
         }
 
-        private static ObjectHash RemoveFileFromRootTree(string vcsPath, ObjectHash treeHash,
-            FileDeleteStrategies filesToRemove, ConcurrentDictionary<ObjectHash, ObjectHash> rewrittenTrees)
+        private static ObjectHash RemoveFileFromRootTree(
+            string vcsPath, ObjectHash treeHash,
+            FileDeleteStrategies filesToRemove,
+            ConcurrentDictionary<ObjectHash, ObjectHash> rewrittenTrees)
         {
             if (rewrittenTrees.TryGetValue(treeHash, out var rewrittenHash))
                 return rewrittenHash;
@@ -52,13 +56,17 @@ namespace GitRewrite.Delete
             var tree = GitObjectFactory.ReadTree(vcsPath, treeHash);
             var resultingLines = new ConcurrentQueue<(int, Tree.TreeLine)>();
 
-            int i = 0;
+            var i = 0;
 
             Parallel.ForEach(tree.Lines.Select(line => (ItemIndex: i++, line)),
                 new ParallelOptions {MaxDegreeOfParallelism = Environment.ProcessorCount},
                 line =>
                 {
-                    var rewrittenLine = RemovefileFromLine(vcsPath, line.line, filesToRemove, rewrittenTrees);
+                    var rewrittenLine = RemoveFileFromLine(
+                        vcsPath,
+                        line.line,
+                        filesToRemove,
+                        rewrittenTrees);
                     if (rewrittenLine != null)
                         resultingLines.Enqueue((line.ItemIndex, rewrittenLine));
                 });
@@ -70,12 +78,10 @@ namespace GitRewrite.Delete
             rewrittenTrees.TryAdd(treeHash, fixedTree.Hash);
 
             return fixedTree.Hash;
-
         }
 
-        private static Tree.TreeLine RemovefileFromLine(
-            string vcsPath,
-            Tree.TreeLine line, 
+        private static Tree.TreeLine RemoveFileFromLine(string vcsPath,
+            Tree.TreeLine line,
             FileDeleteStrategies filesToRemove,
             ConcurrentDictionary<ObjectHash, ObjectHash> rewrittenTrees)
         {
@@ -83,20 +89,28 @@ namespace GitRewrite.Delete
             {
                 if (rewrittenTrees.TryGetValue(line.Hash, out var newHash))
                     return new Tree.TreeLine(line.TextBytes, newHash);
-                
-                var newTreeHash = RemoveFileFromTree(vcsPath, line.Hash, filesToRemove, rewrittenTrees);
-                return new Tree.TreeLine(line.TextBytes, newTreeHash);
 
+                var newTreeHash = RemoveFileFromTree(
+                    vcsPath,
+                    line.Hash,
+                    filesToRemove,
+                    rewrittenTrees,
+                    "/" + line.GetFileName());
+                return new Tree.TreeLine(line.TextBytes, newTreeHash);
             }
 
-            if (!filesToRemove.DeleteFile(line.FileNameBytes))
+            if (!filesToRemove.DeleteFile(line.FileNameBytes, ""))
                 return line;
 
             return null;
         }
 
-        private static ObjectHash RemoveFileFromTree(string vcsPath, ObjectHash treeHash,
-            FileDeleteStrategies filesToRemove, ConcurrentDictionary<ObjectHash, ObjectHash> rewrittenTrees)
+        private static ObjectHash RemoveFileFromTree(
+            string vcsPath,
+            ObjectHash treeHash,
+            FileDeleteStrategies filesToRemove,
+            ConcurrentDictionary<ObjectHash, ObjectHash> rewrittenTrees,
+            string currentPath)
         {
             if (rewrittenTrees.TryGetValue(treeHash, out var rewrittenHash))
                 return rewrittenHash;
@@ -104,23 +118,28 @@ namespace GitRewrite.Delete
             var tree = GitObjectFactory.ReadTree(vcsPath, treeHash);
             var resultingLines = new List<Tree.TreeLine>();
             foreach (var line in tree.Lines)
-            {
                 if (line.IsDirectory())
                 {
                     if (rewrittenTrees.TryGetValue(line.Hash, out var newHash))
+                    {
                         resultingLines.Add(new Tree.TreeLine(line.TextBytes, newHash));
+                    }
                     else
                     {
-                        var newTreeHash = RemoveFileFromTree(vcsPath, line.Hash, filesToRemove, rewrittenTrees);
+                        var newTreeHash = RemoveFileFromTree(
+                            vcsPath,
+                            line.Hash,
+                            filesToRemove,
+                            rewrittenTrees,
+                            currentPath + "/" + line.GetFileName());
                         resultingLines.Add(new Tree.TreeLine(line.TextBytes, newTreeHash));
                     }
                 }
                 else
                 {
-                    if (!filesToRemove.DeleteFile(line.FileNameBytes))
+                    if (!filesToRemove.DeleteFile(line.FileNameBytes, currentPath))
                         resultingLines.Add(line);
                 }
-            }
 
             var fixedTree = Tree.GetFixedTree(resultingLines);
             if (fixedTree.Hash != tree.Hash)
