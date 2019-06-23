@@ -2,20 +2,22 @@
 {
     public class Adler32Computer
     {
-        private const int Modulus = 65521;
-
-        public static int Checksum(byte[] data, int offset, int length)
+        public static uint Checksum(byte[] data, int length)
         {
-            int a = 1;
-            int b = 0;
+            uint adler = 1;
 
-            for (int counter = 0; counter < length; ++counter)
+            uint s1 = adler & 0xffff;
+            uint s2 = adler >> 16;
+
+            for (int i = 0; i < length; i++)
             {
-                a = (a + (data[offset + counter])) % Modulus;
-                b = (b + a) % Modulus;
+                s1 += data[i];
+                s2 += s1;
+                s1 %= 65521U;
+                s2 %= 65521U;
             }
 
-            return ((b * 65536) + a);
+            return s1 | (s2 << 16);
         }
     }
 }
