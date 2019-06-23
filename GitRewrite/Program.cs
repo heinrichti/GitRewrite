@@ -16,7 +16,6 @@ namespace GitRewrite
         static void Main(string[] args)
         {
             var parserResult = Parser.Default.ParseArguments<CommandLineOptions>(args);
-            //string helpText = HelpText.AutoBuild(parserResult);
             parserResult.WithParsed(options =>
             {
                 var optionsSet = 0;
