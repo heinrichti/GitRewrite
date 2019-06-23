@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Buffers;
 using System.IO;
+using System.IO.Compression;
 using System.IO.MemoryMappedFiles;
 using GitRewrite.GitObjects;
-using ZLibNet;
 
 namespace GitRewrite.IO
 {
@@ -24,9 +24,20 @@ namespace GitRewrite.IO
             Directory.CreateDirectory(directoryPath);
 
             using (var fileStream = new FileStream(filePath, FileMode.CreateNew, FileAccess.Write))
-            using (var stream = new ZLibStream(fileStream, CompressionMode.Compress, false))
             {
-                stream.Write(bytes, 0, bytes.Length);
+                fileStream.Write(new byte[] {0x78, 0x5E});
+
+                using (var stream = new DeflateStream(fileStream, CompressionMode.Compress, true))
+                {
+                    stream.Write(bytes);
+                }
+
+                var checksum = Adler32Computer.Checksum(bytes, 0, bytes.Length);
+                var checksumBytes = BitConverter.GetBytes(checksum);
+                if (BitConverter.IsLittleEndian)
+                    Array.Reverse(checksumBytes);
+
+                fileStream.Write(checksumBytes);
             }
         }
 
@@ -48,8 +59,9 @@ namespace GitRewrite.IO
             {
                 int bytesRead;
                 using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
-                using (var stream = new ZLibStream(fileStream, CompressionMode.Decompress, false))
+                using (var stream = new DeflateStream(fileStream, CompressionMode.Decompress, false))
                 {
+                    fileStream.Seek(2, SeekOrigin.Begin);
                     bytesRead = stream.Read(targetBuffer);
                     // TODO properly handle bigger blobs
                     if (bytesRead == BufferLength && !IsBlob(targetBuffer))
@@ -69,14 +81,14 @@ namespace GitRewrite.IO
         
         public static byte[] Unpack(MemoryMappedViewAccessor fileView, PackObject packObject, int additionalOffset = 0)
         {
-            var realOffset = packObject.Offset + packObject.HeaderLength + additionalOffset;
+            var realOffset = packObject.Offset + packObject.HeaderLength + additionalOffset + 2;
             var buffer = new byte[packObject.DataSize];
 
             var safeHandle = fileView.SafeMemoryMappedViewHandle;
             long size = Math.Min(packObject.DataSize + 512, (long)safeHandle.ByteLength - realOffset);
 
             using (var unmanagedMemoryStream = new UnmanagedMemoryStream(safeHandle, realOffset, size))
-            using (var stream = new ZLibStream(unmanagedMemoryStream, CompressionMode.Decompress, true))
+            using (var stream = new DeflateStream(unmanagedMemoryStream, CompressionMode.Decompress, true))
             {
                 stream.Read(buffer, 0, packObject.DataSize);
             }
