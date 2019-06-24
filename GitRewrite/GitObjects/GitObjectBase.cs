@@ -41,8 +41,10 @@ namespace GitRewrite.GitObjects
             if (str.Length > memory.Length)
                 return false;
 
-            for (var i = 0; i < str.Length; i++)
-                if (memory.Span[i] != str[i])
+            var span = memory.Span;
+
+            for (var i = str.Length - 1; i >= 0; i--)
+                if (span[i] != str[i])
                     return false;
 
             return true;

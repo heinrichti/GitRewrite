@@ -173,8 +173,12 @@ namespace GitRewrite
 
                 // rewrite this commit
                 var correctParents = Hash.GetRewrittenParentHashes(commit.Parents, rewrittenCommitHashes).ToList();
-                var newCommitBytes = Commit.GetSerializedCommitWithChangedTreeAndParents(commit, commit.TreeHash,
-                    correctParents);
+                byte[] newCommitBytes;
+                if (correctParents.SequenceEqual(commit.Parents))
+                    newCommitBytes = commit.SerializeToBytes();
+                else
+                    newCommitBytes = Commit.GetSerializedCommitWithChangedTreeAndParents(commit, commit.TreeHash,
+                        correctParents);
 
                 var resultBytes = GitObjectFactory.GetBytesWithHeader(GitObjectType.Commit, newCommitBytes);
 

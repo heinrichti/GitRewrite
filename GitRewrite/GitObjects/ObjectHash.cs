@@ -4,14 +4,32 @@ namespace GitRewrite.GitObjects
 {
     public struct ObjectHash : IEquatable<ObjectHash>
     {
-        public ObjectHash(byte[] hash) => Bytes = hash;
+        private readonly int _hashCode;
+
+        public ObjectHash(byte[] hash)
+        {
+            if (hash.Length != 20)
+                throw new ArgumentException();
+
+            Bytes = hash;
+
+            unchecked
+            {
+                _hashCode = 0;
+                for (var index = hash.Length - 1; index >= 0; index--)
+                {
+                    var b = hash[index];
+                    _hashCode = (_hashCode * 31) ^ b;
+                }
+            }
+        }
 
         public ObjectHash(string hash) : this(Hash.StringToByteArray(hash))
         {
         }
 
-        public ObjectHash(in ReadOnlySpan<byte> _hashStringAsBytes)
-            : this(Hash.HashStringToByteArray(_hashStringAsBytes))
+        public ObjectHash(in ReadOnlySpan<byte> hashStringAsBytes)
+            : this(Hash.HashStringToByteArray(hashStringAsBytes))
         {
 
         }
@@ -22,11 +40,11 @@ namespace GitRewrite.GitObjects
 
         public bool Equals(ObjectHash other)
         {
-            if (Bytes.Length != other.Bytes.Length)
-                return false;
-
-            for (var i = 0; i < Bytes.Length; i++)
-                if (Bytes[i] != other.Bytes[i])
+            var bytes = Bytes;
+            var otherBytes = other.Bytes;
+           
+            for (var i = bytes.Length - 1; i >= 0; i--)
+                if (bytes[i] != otherBytes[i])
                     return false;
 
             return true;
@@ -35,19 +53,7 @@ namespace GitRewrite.GitObjects
         public override bool Equals(object obj) => obj is ObjectHash other && Equals(other);
 
         public override int GetHashCode()
-        {
-            unchecked
-            {
-                var result = 0;
-                for (var index = 0; index < Bytes.Length; index++)
-                {
-                    var b = Bytes[index];
-                    result = (result * 31) ^ b;
-                }
-
-                return result;
-            }
-        }
+            => _hashCode;
 
         public static bool operator !=(ObjectHash h1, ObjectHash h2) => !h1.Equals(h2);
 
