@@ -58,10 +58,9 @@ namespace GitRewrite.GitObjects
 
         public string Author => Encoding.UTF8.GetString(_author.Span.Slice(7));
 
-        public ObjectHash TreeHash => new ObjectHash(Encoding.UTF8.GetString(_treeHash.Span.Slice(5)));
+        public ObjectHash TreeHash => new ObjectHash(_treeHash.Span.Slice(5));
 
-        public IEnumerable<ObjectHash> Parents => _parents;
-            //_parents.Select(x => new ObjectHash(Encoding.UTF8.GetString(x.Span.Slice(7))));
+        public List<ObjectHash> Parents => _parents;
 
         public string CommitMessage => Encoding.UTF8.GetString(_commitMessage.Span);
 
@@ -84,7 +83,6 @@ namespace GitRewrite.GitObjects
         public static byte[] GetSerializedCommitWithChangedTreeAndParents(Commit commit, ObjectHash treeHash,
             IEnumerable<ObjectHash> parents)
         {
-            //var treeOld = Encoding.ASCII.GetBytes("tree " + treeHash);
             var tree = new byte[45];
             Array.Copy(TreePrefix, tree, 5);
             var hashString = treeHash.ToString();
@@ -94,7 +92,8 @@ namespace GitRewrite.GitObjects
             }
 
             var parentLines = new List<byte[]>();
-            foreach (var commitParent in parents) parentLines.Add(Encoding.UTF8.GetBytes("parent " + commitParent));
+            foreach (var commitParent in parents) 
+                parentLines.Add(Encoding.UTF8.GetBytes("parent " + commitParent));
 
             var author = commit._author;
             var committer = commit._committer;

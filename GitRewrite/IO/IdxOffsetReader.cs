@@ -80,7 +80,7 @@ namespace GitRewrite.IO
                         4 * objectCount,
                         SeekOrigin.Begin);
 
-                    foreach (var largeOffset in largeOffsets.OrderBy(x => x.Offset).Select(x => x.Hash))
+                    foreach (var largeOffset in largeOffsets.Select(x => x.Hash))
                     {
                         bufferedStream.Read(buffer, 0, 8);
                         var packOffset = buffer.AsSpan(0, 8);
