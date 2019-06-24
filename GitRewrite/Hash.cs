@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -40,18 +41,21 @@ namespace GitRewrite
             return bytes;
         }
 
-        public static string ByteArrayToHexViaLookup32(ReadOnlySpan<byte> bytes)
+        public static string ByteArrayToHexViaLookup32(byte[] bytes)
         {
             var lookup32 = Lookup32;
-            var result = new char[bytes.Length * 2];
-            for (var i = 0; i < bytes.Length; i++)
-            {
-                var val = lookup32[bytes[i]];
-                result[2 * i] = (char) val;
-                result[2 * i + 1] = (char) (val >> 16);
-            }
 
-            return new string(result);
+            return string.Create<(byte[] Bytes, uint[] Lookup)>(
+                bytes.Length * 2, 
+                (bytes, lookup32), (result, state) =>
+                {
+                    for (var i = 0; i < state.Bytes.Length; i++)
+                    {
+                        var val = state.Lookup[state.Bytes[i]];
+                        result[2 * i] = (char) val;
+                        result[2 * i + 1] = (char) (val >> 16);
+                    }
+                });
         }
 
         public static IEnumerable<ObjectHash> GetRewrittenParentHashes(IEnumerable<ObjectHash> hashes,
