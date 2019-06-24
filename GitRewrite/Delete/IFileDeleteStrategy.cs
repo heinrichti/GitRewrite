@@ -4,6 +4,6 @@ namespace GitRewrite.Delete
 {
     public interface IFileDeleteStrategy
     {
-        bool DeleteFile(in ReadOnlySpan<byte> fileName, string currentPath);
+        bool DeleteFile(in ReadOnlySpan<byte> fileName, ReadOnlySpan<byte> currentPath);
     }
 }

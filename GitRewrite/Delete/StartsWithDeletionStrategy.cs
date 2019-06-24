@@ -10,6 +10,6 @@ namespace GitRewrite.Delete
         public StartsWithDeletionStrategy(string filePattern) =>
             _startBytes = Encoding.UTF8.GetBytes(filePattern.Substring(0, filePattern.Length - 1));
 
-        public bool DeleteFile(in ReadOnlySpan<byte> fileName, string currentPath) => fileName.StartsWith(_startBytes);
+        public bool DeleteFile(in ReadOnlySpan<byte> fileName, ReadOnlySpan<byte> currentPath) => fileName.StartsWith(_startBytes);
     }
 }
