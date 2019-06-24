@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -80,6 +81,8 @@ namespace GitRewrite.Delete
             return fixedTree.Hash;
         }
 
+        private static readonly ArrayPool<byte> FilePathPool = ArrayPool<byte>.Shared;
+
         private static Tree.TreeLine RemoveFileFromLine(string vcsPath,
             Tree.TreeLine line,
             FileDeleteStrategies filesToRemove,
@@ -90,16 +93,22 @@ namespace GitRewrite.Delete
                 if (rewrittenTrees.TryGetValue(line.Hash, out var newHash))
                     return new Tree.TreeLine(line.TextBytes, newHash);
 
+                var pathLength = line.FileNameBytes.Length + 1;
+                var pathBytes = FilePathPool.Rent(pathLength);
+                var path = pathBytes.AsSpan(0, pathLength);
+                path[0] = (byte)'/';
+                line.FileNameBytes.Span.CopyTo(path.Slice(1));
                 var newTreeHash = RemoveFileFromTree(
                     vcsPath,
                     line.Hash,
                     filesToRemove,
                     rewrittenTrees,
-                    "/" + line.GetFileName());
+                    path);
+                FilePathPool.Return(pathBytes);
                 return new Tree.TreeLine(line.TextBytes, newTreeHash);
             }
 
-            if (!filesToRemove.DeleteFile(line.FileNameBytes, ""))
+            if (!filesToRemove.DeleteFile(line.FileNameBytes.Span, new byte[0]))
                 return line;
 
             return null;
@@ -110,7 +119,7 @@ namespace GitRewrite.Delete
             ObjectHash treeHash,
             FileDeleteStrategies filesToRemove,
             ConcurrentDictionary<ObjectHash, ObjectHash> rewrittenTrees,
-            string currentPath)
+            ReadOnlySpan<byte> currentPath)
         {
             if (rewrittenTrees.TryGetValue(treeHash, out var rewrittenHash))
                 return rewrittenHash;
@@ -126,18 +135,28 @@ namespace GitRewrite.Delete
                     }
                     else
                     {
+                        var pathLength = currentPath.Length + line.FileNameBytes.Length + 1;
+                        var rentedPathBytes = FilePathPool.Rent(pathLength);
+                        var path = rentedPathBytes.AsSpan(0, pathLength);
+                        currentPath.CopyTo(path);
+                        path[currentPath.Length] = (byte) '/';
+                        line.FileNameBytes.Span.CopyTo(path.Slice(currentPath.Length + 1));
+                        
                         var newTreeHash = RemoveFileFromTree(
                             vcsPath,
                             line.Hash,
                             filesToRemove,
                             rewrittenTrees,
-                            currentPath + "/" + line.GetFileName());
+                            path);
+
+                        FilePathPool.Return(rentedPathBytes);
+
                         resultingLines.Add(new Tree.TreeLine(line.TextBytes, newTreeHash));
                     }
                 }
                 else
                 {
-                    if (!filesToRemove.DeleteFile(line.FileNameBytes, currentPath))
+                    if (!filesToRemove.DeleteFile(line.FileNameBytes.Span, currentPath))
                         resultingLines.Add(line);
                 }
 

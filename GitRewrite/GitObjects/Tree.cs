@@ -90,23 +90,21 @@ namespace GitRewrite.GitObjects
         {
             public TreeLine(ReadOnlyMemory<byte> text, ObjectHash hash)
             {
-                _text = text;
+                TextBytes = text;
                 Hash = hash;
+
+                FileNameBytes = TextBytes.Slice(TextBytes.Span.IndexOf((byte) ' ') + 1);
             }
 
-            private readonly ReadOnlyMemory<byte> _text;
+            public string Text => Encoding.UTF8.GetString(TextBytes.Span);
 
-            public string Text => Encoding.UTF8.GetString(_text.Span);
+            public ReadOnlyMemory<byte> TextBytes { get; }
 
-            public ReadOnlyMemory<byte> TextBytes => _text;
-
-            public ReadOnlySpan<byte> FileNameBytes => _text.Span.Slice(_text.Span.IndexOf((byte)' ') + 1);
-
-            public string GetFileName() => Encoding.UTF8.GetString(FileNameBytes);
+            public ReadOnlyMemory<byte> FileNameBytes { get; }
 
             public ObjectHash Hash { get; }
 
-            public bool IsDirectory() => _text.Span[0] != '1';
+            public bool IsDirectory() => TextBytes.Span[0] != '1';
 
             public override string ToString() => Hash + " " + Text;
         }

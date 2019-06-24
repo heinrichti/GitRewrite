@@ -23,7 +23,7 @@ namespace GitRewrite.Delete
             }
         }
 
-        public bool DeleteFile(in ReadOnlySpan<byte> fileName, string currentPath)
+        public bool DeleteFile(in ReadOnlySpan<byte> fileName, ReadOnlySpan<byte> currentPath)
         {
             foreach (var strategy in _strategies)
             {
