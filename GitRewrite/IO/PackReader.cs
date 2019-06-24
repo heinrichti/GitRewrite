@@ -122,7 +122,7 @@ namespace GitRewrite.IO
             if (packObject.Type == 6)
             {
                 var unpackedObject =
-                    RestoreDiffedObjectBytes(viewAccessor, viewAccessor, packObject);
+                    RestoreDiffedObjectBytes(viewAccessor, packObject);
                 unpackedBytes = unpackedObject.Bytes;
                 type = unpackedObject.Type;
             }
@@ -151,20 +151,19 @@ namespace GitRewrite.IO
         }
 
 
-        private static (int Type, byte[] Bytes) RestoreDiffedObjectBytes(MemoryMappedViewAccessor memory, 
-            MemoryMappedViewAccessor packFile, PackObject packObject)
+        private static (int Type, byte[] Bytes) RestoreDiffedObjectBytes(MemoryMappedViewAccessor memory, PackObject packObject)
         {
-            var baseObjectNegativeOffset = ReadDeltaOffset(packFile, packObject);
+            var baseObjectNegativeOffset = ReadDeltaOffset(memory, packObject);
 
             var deltaData = HashContent.Unpack(memory, packObject, baseObjectNegativeOffset.BytesRead);
 
             var baseObjectOffset = packObject.Offset - baseObjectNegativeOffset.Int;
-            var deltaBase = ReadPackObject(packFile, baseObjectOffset);
+            var deltaBase = ReadPackObject(memory, baseObjectOffset);
 
             byte[] restoredObjectBytes;
             if (deltaBase.Type == 6)
             {
-                var newDeltaBase = RestoreDiffedObjectBytes(memory, packFile, deltaBase);
+                var newDeltaBase = RestoreDiffedObjectBytes(memory, deltaBase);
                 restoredObjectBytes = ApplyDeltaData(newDeltaBase.Bytes, deltaData);
                 return (newDeltaBase.Type, restoredObjectBytes);
             }
@@ -219,7 +218,7 @@ namespace GitRewrite.IO
             ref int currentDeltaOffset, ref int currentTargetOffset)
         {
             var copyInstruction = deltaData[currentDeltaOffset++];
-            var copyFields = new Stack<DeltaCopyFields>();
+            var copyFields = new Stack<DeltaCopyFields>(7);
 
             if ((copyInstruction & 0b01000000) != 0)
                 copyFields.Push(DeltaCopyFields.Size3);
