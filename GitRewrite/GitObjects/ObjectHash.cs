@@ -10,6 +10,12 @@ namespace GitRewrite.GitObjects
         {
         }
 
+        public ObjectHash(in ReadOnlySpan<byte> _hashStringAsBytes)
+            : this(Hash.HashStringToByteArray(_hashStringAsBytes))
+        {
+
+        }
+
         public byte[] Bytes { get; }
 
         public override string ToString() => Hash.ByteArrayToHexViaLookup32(Bytes);

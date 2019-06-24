@@ -11,14 +11,14 @@ namespace GitRewrite.GitObjects
         private readonly Memory<byte> _commitMessage;
         private readonly Memory<byte> _committer;
         private readonly byte[] _content;
-        private readonly List<ReadOnlyMemory<byte>> _parents;
+        private readonly List<ObjectHash> _parents;
         private readonly Memory<byte> _treeHash;
 
         public Commit(ObjectHash hash, byte[] bytes) : base(hash, GitObjectType.Commit)
         {
             _content = bytes;
             var content = bytes.AsMemory();
-            _parents = new List<ReadOnlyMemory<byte>>();
+            _parents = new List<ObjectHash>();
 
             var nextNewLine = content.Span.IndexOf<byte>(10);
             while (nextNewLine != -1)
@@ -29,7 +29,7 @@ namespace GitRewrite.GitObjects
                 }
                 else if (StartsWith(content, "parent "))
                 {
-                    _parents.Add(content.Slice(0, nextNewLine));
+                    _parents.Add(new ObjectHash(content.Span.Slice(7, nextNewLine - 7)));
                 }
                 else if (content.Span[0] == '\n')
                 {
@@ -60,8 +60,8 @@ namespace GitRewrite.GitObjects
 
         public ObjectHash TreeHash => new ObjectHash(Encoding.UTF8.GetString(_treeHash.Span.Slice(5)));
 
-        public IEnumerable<ObjectHash> Parents =>
-            _parents.Select(x => new ObjectHash(Encoding.UTF8.GetString(x.Span.Slice(7))));
+        public IEnumerable<ObjectHash> Parents => _parents;
+            //_parents.Select(x => new ObjectHash(Encoding.UTF8.GetString(x.Span.Slice(7))));
 
         public string CommitMessage => Encoding.UTF8.GetString(_commitMessage.Span);
 
@@ -79,10 +79,19 @@ namespace GitRewrite.GitObjects
         public override byte[] SerializeToBytes()
             => _content;
 
+        private static readonly byte[] TreePrefix = {(byte) 't', (byte) 'r', (byte) 'e', (byte) 'e', (byte) ' '};
+
         public static byte[] GetSerializedCommitWithChangedTreeAndParents(Commit commit, ObjectHash treeHash,
             IEnumerable<ObjectHash> parents)
         {
-            var tree = Encoding.UTF8.GetBytes("tree " + treeHash);
+            //var treeOld = Encoding.ASCII.GetBytes("tree " + treeHash);
+            var tree = new byte[45];
+            Array.Copy(TreePrefix, tree, 5);
+            var hashString = treeHash.ToString();
+            for (int i = 0; i < hashString.Length; i++)
+            {
+                tree[i + 5] = (byte)hashString[i];
+            }
 
             var parentLines = new List<byte[]>();
             foreach (var commitParent in parents) parentLines.Add(Encoding.UTF8.GetBytes("parent " + commitParent));

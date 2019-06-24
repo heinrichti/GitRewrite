@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using GitRewrite.GitObjects;
 
@@ -32,13 +33,56 @@ namespace GitRewrite
             return result;
         }
 
-        public static byte[] StringToByteArray(string hex)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static byte GetHashValue(char c)
         {
-            var numberChars = hex.Length;
-            var bytes = new byte[numberChars / 2];
-            for (var i = 0; i < numberChars; i += 2)
-                bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
-            return bytes;
+            if (c == '0') return 0;
+            if (c == '1') return 1;
+            if (c == '2') return 2;
+            if (c == '3') return 3;
+            if (c == '4') return 4;
+            if (c == '5') return 5;
+            if (c == '6') return 6;
+            if (c == '7') return 7;
+            if (c == '8') return 8;
+            if (c == '9') return 9;
+            if (c == 'a') return 10;
+            if (c == 'A') return 10;
+            if (c == 'b') return 11;
+            if (c == 'B') return 11;
+            if (c == 'c') return 12;
+            if (c == 'C') return 12;
+            if (c == 'd') return 13;
+            if (c == 'D') return 13;
+            if (c == 'e') return 14;
+            if (c == 'E') return 14;
+            if (c == 'f') return 15;
+            if (c == 'F') return 15;
+
+            throw new ArgumentException();
+        }
+
+        public static byte[] HashStringToByteArray(in ReadOnlySpan<byte> hashStringAsBytes)
+        {
+            var resultSize = hashStringAsBytes.Length / 2;
+            var result = new byte[resultSize];
+
+            for (int i = 0; i < resultSize; i++)
+                result[i] = (byte) ((GetHashValue((char) hashStringAsBytes[2 * i]) << 4) |
+                                    GetHashValue((char) hashStringAsBytes[2 * i + 1]));
+
+            return result;
+        }
+
+        public static byte[] StringToByteArray(ReadOnlySpan<char> hash)
+        {
+            var resultSize = hash.Length / 2;
+            var result = new byte[resultSize];
+
+            for (int i = 0; i < resultSize; i++)
+                result[i] = (byte) ((GetHashValue(hash[2 * i]) << 4) | GetHashValue(hash[2 * i + 1]));
+
+            return result;
         }
 
         public static string ByteArrayToHexViaLookup32(byte[] bytes)
