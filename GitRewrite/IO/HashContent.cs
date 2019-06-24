@@ -32,7 +32,7 @@ namespace GitRewrite.IO
                     stream.Write(bytes);
                 }
 
-                var checksum = Adler32Computer.Checksum(bytes, bytes.Length);
+                var checksum = Adler32Computer.Checksum(bytes);
                 var checksumBytes = BitConverter.GetBytes(checksum);
                 if (BitConverter.IsLittleEndian)
                     Array.Reverse(checksumBytes);
