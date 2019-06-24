@@ -3,7 +3,6 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using GitRewrite.GitObjects;
 using GitRewrite.IO;
 
@@ -55,24 +54,20 @@ namespace GitRewrite.Delete
                 return rewrittenHash;
 
             var tree = GitObjectFactory.ReadTree(vcsPath, treeHash);
-            var resultingLines = new ConcurrentQueue<(int, Tree.TreeLine)>();
+            var resultingLines = new List<Tree.TreeLine>();
 
-            var i = 0;
+            foreach (var line in tree.Lines)
+            {
+                var rewrittenLine = RemoveFileFromLine(
+                    vcsPath,
+                    line,
+                    filesToRemove,
+                    rewrittenTrees);
+                if (rewrittenLine != null)
+                    resultingLines.Add(line);
+            }
 
-            Parallel.ForEach(tree.Lines.Select(line => (ItemIndex: i++, line)),
-                new ParallelOptions {MaxDegreeOfParallelism = Environment.ProcessorCount},
-                line =>
-                {
-                    var rewrittenLine = RemoveFileFromLine(
-                        vcsPath,
-                        line.line,
-                        filesToRemove,
-                        rewrittenTrees);
-                    if (rewrittenLine != null)
-                        resultingLines.Enqueue((line.ItemIndex, rewrittenLine));
-                });
-
-            var fixedTree = Tree.GetFixedTree(resultingLines.OrderBy(x => x.Item1).Select(x => x.Item2));
+            var fixedTree = Tree.GetFixedTree(resultingLines);
             if (fixedTree.Hash != tree.Hash)
                 HashContent.WriteObject(vcsPath, fixedTree);
 
