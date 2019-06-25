@@ -66,18 +66,48 @@ namespace GitRewrite.GitObjects
 
         public static bool HasDuplicateLines(IReadOnlyList<TreeLine> treeLines)
         {
-            var lines = new HashSet<string>();
-            return !treeLines.All(x => lines.Add(x.Text));
+            // Treelines are ordered, so we only need to compare with the previous element, not all elements in the tree
+            TreeLine lastLine = null;
+            using (var it = treeLines.GetEnumerator())
+            {
+                if (it.MoveNext())
+                    lastLine = it.Current;
+
+                while (it.MoveNext())
+                {
+                    var treeLine = it.Current;
+                    if (treeLine.TextBytes.Span.SequenceEqual(lastLine.TextBytes.Span))
+                        return true;
+                    lastLine = treeLine;
+                }
+            }
+
+            return false;
         }
 
         public static Tree GetFixedTree(IEnumerable<TreeLine> treeLines)
         {
             var distinctTreeLines = new List<TreeLine>();
-            var hashSet = new HashSet<string>();
 
-            foreach (var treeLine in treeLines)
-                if (hashSet.Add(treeLine.Text))
-                    distinctTreeLines.Add(treeLine);
+            // Treelines are ordered, so we only need to compare with the previous element, not all elements in the tree
+            int i = 0;
+            using (var it = treeLines.GetEnumerator())
+            {
+                if (it.MoveNext())
+                {
+                    distinctTreeLines.Add(it.Current);
+                    ++i;
+                }
+
+                while (it.MoveNext())
+                {
+                    var treeLine = it.Current;
+                    if (treeLine.TextBytes.Span.SequenceEqual(distinctTreeLines[i++ - 1].TextBytes.Span))
+                        --i;
+                    else
+                        distinctTreeLines.Add(treeLine);
+                }
+            }
 
             var serializedObject = GetSerializedObject(distinctTreeLines);
 
@@ -96,7 +126,7 @@ namespace GitRewrite.GitObjects
                 FileNameBytes = TextBytes.Slice(TextBytes.Span.IndexOf((byte) ' ') + 1);
             }
 
-            public string Text => Encoding.UTF8.GetString(TextBytes.Span);
+            public string TextString => Encoding.UTF8.GetString(TextBytes.Span);
 
             public ReadOnlyMemory<byte> TextBytes { get; }
 
@@ -106,7 +136,7 @@ namespace GitRewrite.GitObjects
 
             public bool IsDirectory() => TextBytes.Span[0] != '1';
 
-            public override string ToString() => Hash + " " + Text;
+            public override string ToString() => Hash + " " + TextString;
         }
     }
 }
