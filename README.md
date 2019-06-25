@@ -8,7 +8,10 @@ The most useful is deleting files:
 ```cmd
 GitRewrite C:/VCS/MyRepo -d file1 file2 file3
 ```
-Deleting should be pretty fast, in my tests it even outperformed the bfg repo cleaner by a factor of 2. It has no wildcard support yet.
+Deleting should be pretty fast, in my tests it even outperformed the bfg repo cleaner by at least factor of 2. 
+Simple wildcards for the beginning and the end of the filename are supported, like &ast;.zip.
+It also lets you specify the complete path to the file instead of only a file name. 
+For this the path has to be prefixed by a forward slash and the path seperator also is a forward slash: /path/to/file.txt
 
 Another useful feature is to remove empty commits. 
 For this tool empty commits are defined as commits that have only a single parent and the same tree as their parent.
@@ -42,7 +45,5 @@ Currently we are building with the preview of .NET Core 3.0, so the SDK should b
 ```
 git clone https://github.com/TimHeinrich/GitRewrite.git
 cd GitRewrite
-git submodule init
-git submodule update
 dotnet publish --self-contained -r win10-x64 -c Release 
 ```
