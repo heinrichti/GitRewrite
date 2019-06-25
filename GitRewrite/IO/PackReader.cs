@@ -75,7 +75,7 @@ namespace GitRewrite.IO
             {
                 var capacity = new FileInfo(file.PackFilePath).Length;
                 var memoryMappedFile = MemoryMappedFile.CreateFromFile(file.PackFilePath, FileMode.Open,
-                    Path.GetFileName(file.PackFilePath), capacity, MemoryMappedFileAccess.Read);
+                     null, capacity, MemoryMappedFileAccess.Read);
                 var viewAccessor = memoryMappedFile.CreateViewAccessor(0, capacity, MemoryMappedFileAccess.Read);
 
                 foreach (var offset in IdxOffsetReader.GetPackOffsets(file.IdxFilePath))
