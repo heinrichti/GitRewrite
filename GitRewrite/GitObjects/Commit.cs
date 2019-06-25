@@ -44,6 +44,13 @@ namespace GitRewrite.GitObjects
                 {
                     _committer = content.Slice(0, nextNewLine);
                 }
+                else if (StartsWith(content, "gpgsig "))
+                {
+                    // gpgsig are not really handled, instead a gpgsig is not written back when rewriting the object
+                    var pgpSignatureEnd = content.Span.IndexOf(PgpSignatureEnd);
+                    content = content.Slice(pgpSignatureEnd + PgpSignatureEnd.Length + 1);
+                    nextNewLine = content.Span.IndexOf((byte) '\n');
+                }
                 else
                 {
                     throw new Exception("Unknown line");
@@ -53,6 +60,8 @@ namespace GitRewrite.GitObjects
                 nextNewLine = content.Span.IndexOf((byte) '\n');
             }
         }
+
+        private static readonly byte[] PgpSignatureEnd = "-----END PGP SIGNATURE-----".Select(c => (byte) c).ToArray();
 
         public string Committer => Encoding.UTF8.GetString(_committer.Span.Slice(10));
 
