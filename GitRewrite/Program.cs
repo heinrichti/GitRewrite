@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using CommandLine;
 using GitRewrite.Delete;
 using GitRewrite.GitObjects;
 using GitRewrite.IO;
@@ -13,42 +12,77 @@ namespace GitRewrite
 {
     public class Program
     {
+        static void PrintHelp()
+        {
+            Console.WriteLine("GitRewrite [options] repository_path");
+            Console.WriteLine();
+            Console.WriteLine("Options:");
+            Console.WriteLine("-e");
+            Console.WriteLine("  Removes empty commits from the repository.");
+            Console.WriteLine();
+
+            Console.WriteLine("-d [filePattern...], --delete-files [filePattern...]");
+            Console.WriteLine("  Delete files from the repository.");
+            Console.WriteLine("  [filePattern...] is a list of comma separated patterns. Option can be defined multiple times.");
+            Console.WriteLine("  If filePattern is filename, then the file with the name filename will be deleted from all directories.");
+            Console.WriteLine("  If filePattern is filename*, then all files starting with filename will be deleted from all directories.");
+            Console.WriteLine("  If filePattern is *filename, then all files ending with filename will be deleted from all directories.");
+            Console.WriteLine("  If filePattern is /path/to/filename, then the file will be delete only in the exact directory.");
+            Console.WriteLine();
+
+            Console.WriteLine("--fix-trees");
+            Console.WriteLine("  Checks for trees with duplicate entries. Rewrites the tree taking only the first entry.");
+        }
+
         static void Main(string[] args)
         {
-            var parserResult = Parser.Default.ParseArguments<CommandLineOptions>(args);
-            parserResult.WithParsed(options =>
+            CommandLineOptions options;
+            try
             {
-                var optionsSet = 0;
-                optionsSet += options.FixTrees ? 1 : 0;
-                optionsSet += options.FilesToDelete.Any() ? 1 : 0;
-                optionsSet += options.RemoveEmptyCommits ? 1 : 0;
+                options = new CommandLineOptions(args);
+            }
+            catch (Exception )
+            {
+                PrintHelp();
+                return;
+            }
 
-                if (optionsSet != 1)
-                {
-                    Console.WriteLine("Cannot mix operations. Only choose one operation at a time (multiple file deletes are allowed).");
-                    Console.WriteLine("For available options see GitRewrite --help");
-                    return;
-                }
+            var optionsSet = 0;
+            optionsSet += options.FixTrees ? 1 : 0;
+            optionsSet += options.FilesToDelete.Any() ? 1 : 0;
+            optionsSet += options.RemoveEmptyCommits ? 1 : 0;
 
-                if (options.FixTrees)
-                {
-                    var defectiveCommits = FindCommitsWithDuplicateTreeEntries(options.RepositoryPath).ToList();
+            if (optionsSet > 1)
+            {
+                Console.WriteLine("Cannot mix operations. Only choose one operation at a time (multiple file deletes are allowed).");
+                Console.WriteLine();
+                PrintHelp();
+                return;
+            }
 
-                    var rewrittenCommits = FixDefectiveCommits(options.RepositoryPath, defectiveCommits);
-                    if (rewrittenCommits.Any())
-                        Refs.Update(options.RepositoryPath, rewrittenCommits);
-                }
-                else if (options.FilesToDelete.Any())
-                {
-                    DeleteFiles.Run(options.RepositoryPath, options.FilesToDelete);
-                }
-                else if (options.RemoveEmptyCommits)
-                {
-                    var rewrittenCommits = RemoveEmptyCommits(options.RepositoryPath);
-                    if (rewrittenCommits.Any())
-                        Refs.Update(options.RepositoryPath, rewrittenCommits);
-                }
-            });
+            if (optionsSet == 0)
+                PrintHelp();
+
+            PackReader.InitializePackFiles(options.RepositoryPath);
+
+            if (options.FixTrees)
+            {
+                var defectiveCommits = FindCommitsWithDuplicateTreeEntries(options.RepositoryPath).ToList();
+
+                var rewrittenCommits = FixDefectiveCommits(options.RepositoryPath, defectiveCommits);
+                if (rewrittenCommits.Any())
+                    Refs.Update(options.RepositoryPath, rewrittenCommits);
+            }
+            else if (options.FilesToDelete.Any())
+            {
+                DeleteFiles.Run(options.RepositoryPath, options.FilesToDelete);
+            }
+            else if (options.RemoveEmptyCommits)
+            {
+                var rewrittenCommits = RemoveEmptyCommits(options.RepositoryPath);
+                if (rewrittenCommits.Any())
+                    Refs.Update(options.RepositoryPath, rewrittenCommits);
+            }
         }
 
         public static ObjectHash WriteFixedTree(string vcsPath, Tree tree)

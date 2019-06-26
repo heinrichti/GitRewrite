@@ -56,7 +56,7 @@ namespace GitRewrite
 
         public static GitObjectBase ReadGitObject(string repositoryPath, ObjectHash hash)
         {
-            var gitObject = PackReader.GetObject(repositoryPath, hash);
+            var gitObject = PackReader.GetObject(hash);
             if (gitObject != null)
                 return gitObject;
 
@@ -96,7 +96,7 @@ namespace GitRewrite
 
         public static Tree ReadTree(string repositoryPath, ObjectHash hash)
         {
-            var tree = PackReader.GetTree(repositoryPath, hash);
+            var tree = PackReader.GetTree(hash);
             if (tree != null)
                 return tree;
 
