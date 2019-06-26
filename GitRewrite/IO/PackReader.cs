@@ -9,9 +9,9 @@ namespace GitRewrite.IO
 {
     public static class PackReader
     {
-        public static Blob GetBlob(string repositoryPath, ObjectHash objectHash)
+        public static Blob GetBlob(ObjectHash objectHash)
         {
-            var result = GetGitObject(GetPackFiles(repositoryPath), objectHash);
+            var result = GetGitObject(objectHash);
             if (result == null)
                 return null;
             if (result.Type == GitObjectType.Blob)
@@ -42,7 +42,7 @@ namespace GitRewrite.IO
 
         public static Commit GetCommit(string repositoryPath, ObjectHash hash)
         {
-            var result = GetGitObject(GetPackFiles(repositoryPath), hash);
+            var result = GetGitObject(hash);
             if (result == null)
                 return null;
             if (result.Type == GitObjectType.Commit)
@@ -51,12 +51,12 @@ namespace GitRewrite.IO
             throw new ArgumentException(hash + " is not a commit.");
         }
 
-        public static GitObjectBase GetObject(string repositoryPath, ObjectHash hash)
-            => GetGitObject(GetPackFiles(repositoryPath), hash);
+        public static GitObjectBase GetObject(ObjectHash hash)
+            => GetGitObject(hash);
 
-        public static Tree GetTree(string repositoryPath, ObjectHash hash)
+        public static Tree GetTree(ObjectHash hash)
         {
-            var result = GetGitObject(GetPackFiles(repositoryPath), hash);
+            var result = GetGitObject(hash);
             if (result == null)
                 return null;
             if (result.Type == GitObjectType.Tree)
@@ -66,6 +66,11 @@ namespace GitRewrite.IO
         }
 
         private static Dictionary<ObjectHash, (MemoryMappedViewAccessor, long)> _packOffsets;
+
+        public static void InitializePackFiles(string vcsPath)
+        {
+            _packOffsets = BuildPackFileDictionary(GetPackFiles(vcsPath));
+        }
 
         private static Dictionary<ObjectHash, (MemoryMappedViewAccessor, long)>BuildPackFileDictionary(IEnumerable<(string IdxFilePath, string PackFilePath)> packFiles)
         {
@@ -87,30 +92,16 @@ namespace GitRewrite.IO
             return offsets;
         }
 
-        private static readonly object PackOffsetReadLock = new object();
-
-        private static (MemoryMappedViewAccessor ViewAccessor, long Offset) GetOffset(IEnumerable<(string IdxFilePath, string PackFilePath)> packFiles, ObjectHash hash)
+        private static (MemoryMappedViewAccessor ViewAccessor, long Offset) GetOffset(ObjectHash hash)
         {
-            if (_packOffsets != null)
-            {
-                if (_packOffsets.TryGetValue(hash, out var result))
-                    return result;
-                return (null, -1);
-            }
-
-            lock (PackOffsetReadLock)
-            {
-                _packOffsets = _packOffsets ?? BuildPackFileDictionary(packFiles);
-                if (_packOffsets.TryGetValue(hash, out var result))
-                    return result;
-
-                return (null, -1);
-            }
+            if (_packOffsets.TryGetValue(hash, out var result))
+                return result;
+            return (null, -1);
         }
 
-        public static GitObjectBase GetGitObject(IEnumerable<(string IdxFilePath, string PackFilePath)> packFiles, ObjectHash hash)
+        public static GitObjectBase GetGitObject(ObjectHash hash)
         {
-            var (viewAccessor, offset) = GetOffset(packFiles, hash);
+            var (viewAccessor, offset) = GetOffset(hash);
             if (offset == -1)
                 return null;
 

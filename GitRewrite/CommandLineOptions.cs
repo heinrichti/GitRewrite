@@ -1,23 +1,78 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using CommandLine;
+﻿using System;
+using System.Collections.Generic;
 
 namespace GitRewrite
 {
-    class CommandLineOptions
+    internal class CommandLineOptions
     {
-        [Value(0, MetaName = "RepositoryPath", HelpText = "Path to the git repository. Should be cloned with --mirror. This has to be the first parameter", Required = true)]
-        public string RepositoryPath { get; set; }
+        public CommandLineOptions(string[] args)
+        {
+            var deleteFilesStarted = false;
 
-        [Option('d', "delete-file", HelpText = "Deletes the given files from the repository. Files are separated by a single space")]
-        public IEnumerable<string> FilesToDelete { get; set; }
+            foreach (var arg in args)
+                if (deleteFilesStarted)
+                {
+                    FilesToDelete.AddRange(GetFiles(arg));
+                    deleteFilesStarted = false;
+                }
+                else switch (arg)
+                {
+                    case "-e":
+                        RemoveEmptyCommits = true;
+                        break;
+                    case "-d":
+                    case "--delete-files":
+                        deleteFilesStarted = true;
+                        break;
+                    case "--fix-trees":
+                        FixTrees = true;
+                        break;
+                    case "-h":
+                    case "--help":
+                        ShowHelp = true;
+                        break;
+                    default:
+                        if (arg.StartsWith("-"))
+                            throw new ArgumentException("Could not parse arguments.");
+                        RepositoryPath = arg;
+                        break;
+                }
+        }
 
-        [Option("fix-trees", HelpText = "Fixes trees with duplicate entries by only taking the first entry with the same name.")]
-        public bool FixTrees { get; set; }
+        public bool ShowHelp { get; }
 
-        [Option('e', "remove-empty", HelpText = "Removes empty commits.")]
-        public bool RemoveEmptyCommits { get; set; }
+        public string RepositoryPath { get; }
 
-        
+        public List<string> FilesToDelete { get; } = new List<string>();
+
+        public bool FixTrees { get; }
+
+        public bool RemoveEmptyCommits { get; }
+
+        private List<string> GetFiles(string fileString)
+        {
+            var result = new List<string>();
+
+            var fileSpan = fileString.AsSpan();
+
+            var indexOfSeperator = fileSpan.IndexOf(',');
+            while (indexOfSeperator >= 0)
+            {
+                if (indexOfSeperator == 0)
+                    continue;
+
+                var arg = new string(fileSpan.Slice(0, indexOfSeperator));
+                if (!string.IsNullOrWhiteSpace(arg))
+                    result.Add(arg);
+                fileSpan = fileSpan.Slice(indexOfSeperator + 1);
+                indexOfSeperator = fileSpan.IndexOf(',');
+            }
+
+            var lastArg = new string(fileSpan);
+            if (!string.IsNullOrWhiteSpace(lastArg))
+                result.Add(new string(fileSpan));
+
+            return result;
+        }
     }
 }

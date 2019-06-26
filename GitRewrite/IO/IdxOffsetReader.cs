@@ -30,7 +30,7 @@ namespace GitRewrite.IO
 
             return result;
         }
-       
+
         public static IEnumerable<(byte[] Hash, long Offset)> GetPackOffsets(string idxFile)
         {
             using (var fileStream = new FileStream(idxFile, FileMode.Open, FileAccess.Read))
@@ -44,12 +44,12 @@ namespace GitRewrite.IO
                 if (objectCount == 0)
                     yield break;
 
-                Queue<byte[]> hashes = new Queue<byte[]>();
+                var hashes = new Queue<byte[]>();
                 using (var bufferedStream = new BufferedStream(fileStream, 4096))
                 {
-                    for (int i = 0; i < objectCount; i++)
+                    for (var i = 0; i < objectCount; i++)
                     {
-                        byte[] hash = new byte[20];
+                        var hash = new byte[20];
                         bufferedStream.Read(hash);
                         hashes.Enqueue(hash);
                     }
@@ -59,7 +59,7 @@ namespace GitRewrite.IO
 
                     List<(byte[] Hash, long Offset)> largeOffsets = new List<(byte[], long)>();
 
-                    for (int i = 0; i < objectCount; i++)
+                    for (var i = 0; i < objectCount; i++)
                     {
                         bufferedStream.Read(buffer, 0, 4);
                         var packOffset = buffer.AsSpan(0, 4);
