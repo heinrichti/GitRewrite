@@ -31,6 +31,9 @@ namespace GitRewrite
                     case "--help":
                         ShowHelp = true;
                         break;
+                    case "--contributer-names":
+                        ListContributerNames = true;
+                        break;
                     default:
                         if (arg.StartsWith("-"))
                             throw new ArgumentException("Could not parse arguments.");
@@ -38,6 +41,8 @@ namespace GitRewrite
                         break;
                 }
         }
+
+        public bool ListContributerNames { get; }
 
         public bool ShowHelp { get; }
 
