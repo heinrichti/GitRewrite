@@ -63,5 +63,5 @@ Currently we are building with the preview of .NET Core 3.0, so the SDK should b
 ```
 git clone https://github.com/TimHeinrich/GitRewrite.git
 cd GitRewrite
-dotnet publish --self-contained -r win10-x64 -c Release 
+dotnet publish --self-contained -r win-x64 -c Release 
 ```
