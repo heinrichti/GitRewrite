@@ -95,8 +95,10 @@ namespace GitRewrite
             }
             else if (options.ListContributerNames)
             {
-                foreach (var contributer in GetContributers(options.RepositoryPath))
-                    Console.WriteLine(Encoding.UTF8.GetString(contributer.Span));
+                foreach (var contributer in GetContributers(options.RepositoryPath)
+                    .Select(contributer => Encoding.UTF8.GetString(contributer.Span))
+                    .OrderBy(x => x))
+                    Console.WriteLine(contributer);
             }
         }
 
