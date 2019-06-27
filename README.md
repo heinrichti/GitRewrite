@@ -3,6 +3,8 @@ Faster alternative to git filter-branch or bfg-repo-cleaner to perform certain r
 
 With this tool the repository can be rewritten in a few different ways. 
 
+Docker images are available here: https://hub.docker.com/r/lightraven/git-rewrite
+
 ## Important notice
 This tool will rewrite the git history and therefore change many, if not all, commit hashes.
 It will also unsigne signed commits. 
