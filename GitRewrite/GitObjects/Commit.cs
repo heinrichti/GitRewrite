@@ -7,9 +7,9 @@ namespace GitRewrite.GitObjects
 {
     public sealed class Commit : GitObjectBase, IEquatable<Commit>
     {
-        private readonly Memory<byte> _author;
+        private readonly Memory<byte> _authorLine;
         private readonly Memory<byte> _commitMessage;
-        private readonly Memory<byte> _committer;
+        private readonly Memory<byte> _committerLine;
         private readonly byte[] _content;
         private readonly List<ObjectHash> _parents;
         private readonly Memory<byte> _treeHash;
@@ -38,11 +38,11 @@ namespace GitRewrite.GitObjects
                 }
                 else if (StartsWith(content, "author "))
                 {
-                    _author = content.Slice(0, nextNewLine);
+                    _authorLine = content.Slice(0, nextNewLine);
                 }
                 else if (StartsWith(content, "committer "))
                 {
-                    _committer = content.Slice(0, nextNewLine);
+                    _committerLine = content.Slice(0, nextNewLine);
                 }
                 else if (StartsWith(content, "gpgsig "))
                 {
@@ -63,9 +63,26 @@ namespace GitRewrite.GitObjects
 
         private static readonly byte[] PgpSignatureEnd = "-----END PGP SIGNATURE-----".Select(c => (byte) c).ToArray();
 
-        public string Committer => Encoding.UTF8.GetString(_committer.Span.Slice(10));
+        public ReadOnlyMemory<byte> CommitterName => GetContributerName(_committerLine.Slice(10));
 
-        public string Author => Encoding.UTF8.GetString(_author.Span.Slice(7));
+        public ReadOnlyMemory<byte> AuthorName => GetContributerName(_authorLine.Slice(7));
+
+        private ReadOnlyMemory<byte> GetContributerName(in ReadOnlyMemory<byte> contributerWithTime)
+        {
+            var span = contributerWithTime.Span;
+            int spaces = 0;
+            int index = 0;
+            for (int i = contributerWithTime.Length - 1; i >= 0; i--)
+            {
+                if (span[i] == ' ' && ++spaces == 2)
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            return contributerWithTime.Slice(0, index);
+        }
 
         public ObjectHash TreeHash => new ObjectHash(_treeHash.Span.Slice(5));
 
@@ -104,8 +121,8 @@ namespace GitRewrite.GitObjects
             foreach (var commitParent in parents) 
                 parentLines.Add(Encoding.UTF8.GetBytes("parent " + commitParent));
 
-            var author = commit._author;
-            var committer = commit._committer;
+            var author = commit._authorLine;
+            var committer = commit._committerLine;
 
             var message = commit._commitMessage;
 

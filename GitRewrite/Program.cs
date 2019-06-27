@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using GitRewrite.Delete;
 using GitRewrite.GitObjects;
 using GitRewrite.IO;
@@ -32,6 +33,11 @@ namespace GitRewrite
 
             Console.WriteLine("--fix-trees");
             Console.WriteLine("  Checks for trees with duplicate entries. Rewrites the tree taking only the first entry.");
+            Console.WriteLine();
+
+            Console.WriteLine("--contributer-names");
+            Console.WriteLine("  Writes all authors and committers to stdout");
+            Console.WriteLine();
         }
 
         static void Main(string[] args)
@@ -51,6 +57,7 @@ namespace GitRewrite
             optionsSet += options.FixTrees ? 1 : 0;
             optionsSet += options.FilesToDelete.Any() ? 1 : 0;
             optionsSet += options.RemoveEmptyCommits ? 1 : 0;
+            optionsSet += options.ListContributerNames ? 1 : 0;
 
             if (optionsSet > 1)
             {
@@ -60,8 +67,11 @@ namespace GitRewrite
                 return;
             }
 
-            if (optionsSet == 0)
+            if (optionsSet == 0 || string.IsNullOrWhiteSpace(options.RepositoryPath))
+            {
                 PrintHelp();
+                return;
+            }
 
             PackReader.InitializePackFiles(options.RepositoryPath);
 
@@ -82,6 +92,11 @@ namespace GitRewrite
                 var rewrittenCommits = RemoveEmptyCommits(options.RepositoryPath);
                 if (rewrittenCommits.Any())
                     Refs.Update(options.RepositoryPath, rewrittenCommits);
+            }
+            else if (options.ListContributerNames)
+            {
+                foreach (var contributer in GetContributers(options.RepositoryPath))
+                    Console.WriteLine(Encoding.UTF8.GetString(contributer.Span));
             }
         }
 
@@ -183,6 +198,10 @@ namespace GitRewrite
             }
         }
 
+        private static IEnumerable<ReadOnlyMemory<byte>> GetContributers(string vcsPath)
+            => CommitWalker.CommitsRandomOrder(vcsPath).SelectMany(commit => new[] {commit.AuthorName, commit.CommitterName})
+                .Distinct(new ByteMemoryEqualityComparer());
+
         private static Dictionary<ObjectHash, ObjectHash> RemoveEmptyCommits(string vcsPath)
         {
             var rewrittenCommitHashes = new Dictionary<ObjectHash, ObjectHash>();
@@ -193,7 +212,7 @@ namespace GitRewrite
                 if (rewrittenCommitHashes.ContainsKey(commit.Hash))
                     continue;
 
-                if (commit.Parents.Count() == 1)
+                if (commit.Parents.Count == 1)
                 {
                     var parentHash = Hash.GetRewrittenParentHash(commit, rewrittenCommitHashes);
                     var parentTreeHash = commitsWithTreeHashes[parentHash];
