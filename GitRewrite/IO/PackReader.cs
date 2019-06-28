@@ -226,36 +226,30 @@ namespace GitRewrite.IO
             ref int currentDeltaOffset, ref int currentTargetOffset)
         {
             var copyInstruction = deltaData[currentDeltaOffset++];
-            var copyFields = new Stack<DeltaCopyFields>(7);
-
-            if ((copyInstruction & 0b01000000) != 0)
-                copyFields.Push(DeltaCopyFields.Size3);
-            if ((copyInstruction & 0b00100000) != 0)
-                copyFields.Push(DeltaCopyFields.Size2);
-            if ((copyInstruction & 0b00010000) != 0)
-                copyFields.Push(DeltaCopyFields.Size1);
-            if ((copyInstruction & 0b00001000) != 0)
-                copyFields.Push(DeltaCopyFields.Offset4);
-            if ((copyInstruction & 0b00000100) != 0)
-                copyFields.Push(DeltaCopyFields.Offset3);
-            if ((copyInstruction & 0b00000010) != 0)
-                copyFields.Push(DeltaCopyFields.Offset2);
-            if ((copyInstruction & 0b00000001) != 0)
-                copyFields.Push(DeltaCopyFields.Offset1);
 
             var offset = 0;
             var length = 0;
 
-            while (copyFields.TryPop(out var field))
-            {
-                var b = deltaData[currentDeltaOffset++];
-                var shift = GetShiftForField(field);
+            if ((copyInstruction & 0b00000001) != 0)
+                offset |= deltaData[currentDeltaOffset++];
 
-                if (IsOffset(field))
-                    offset |= b << shift;
-                else
-                    length |= b << shift;
-            }
+            if ((copyInstruction & 0b00000010) != 0)
+                offset |= deltaData[currentDeltaOffset++] << 8;
+
+            if ((copyInstruction & 0b00000100) != 0)
+                offset |= deltaData[currentDeltaOffset++] << 16;
+
+            if ((copyInstruction & 0b00001000) != 0)
+                offset |= deltaData[currentDeltaOffset++] << 24;
+
+            if ((copyInstruction & 0b00010000) != 0)
+                length |= deltaData[currentDeltaOffset++];
+
+            if ((copyInstruction & 0b00100000) != 0)
+                length |= deltaData[currentDeltaOffset++] << 8;
+
+            if ((copyInstruction & 0b01000000) != 0)
+                length |= deltaData[currentDeltaOffset++] << 16;
 
             if (length == 0)
                 length = 0x10000;
@@ -265,24 +259,6 @@ namespace GitRewrite.IO
             sourceSlice.CopyTo(targetSlice);
             currentTargetOffset += length;
         }
-
-        private static int GetShiftForField(DeltaCopyFields field)
-        {
-            if (field == DeltaCopyFields.Offset1 || field == DeltaCopyFields.Size1)
-                return 0;
-            if (field == DeltaCopyFields.Offset2 || field == DeltaCopyFields.Size2)
-                return 8;
-            if (field == DeltaCopyFields.Offset3 || field == DeltaCopyFields.Size3)
-                return 16;
-            if (field == DeltaCopyFields.Offset4)
-                return 24;
-
-            throw new NotImplementedException();
-        }
-
-        private static bool IsOffset(DeltaCopyFields field) =>
-            field == DeltaCopyFields.Offset1 || field == DeltaCopyFields.Offset2 || field == DeltaCopyFields.Offset3 ||
-            field == DeltaCopyFields.Offset4;
 
         private static (int targetLength, int deltaOffset) ReadVariableDeltaOffsetLength(in ReadOnlySpan<byte> deltaData,
             int offset = 0)
@@ -337,17 +313,6 @@ namespace GitRewrite.IO
             }
 
             return (offset, bytesRead);
-        }
-
-        private enum DeltaCopyFields
-        {
-            Offset1,
-            Offset2,
-            Offset3,
-            Offset4,
-            Size1,
-            Size2,
-            Size3
         }
     }
 }
