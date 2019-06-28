@@ -64,7 +64,13 @@ namespace GitRewrite.Delete
                     filesToRemove,
                     rewrittenTrees);
                 if (rewrittenLine != null)
-                    resultingLines.Add(line);
+                    resultingLines.Add(rewrittenLine);
+            }
+
+            if (resultingLines.Count == tree.Lines.Count && resultingLines.SequenceEqual(tree.Lines, _treeLineByHashComparer))
+            {
+                rewrittenTrees.TryAdd(tree.Hash, tree.Hash);
+                return tree.Hash;
             }
 
             var fixedTree = Tree.GetFixedTree(resultingLines);
@@ -77,6 +83,7 @@ namespace GitRewrite.Delete
         }
 
         private static readonly ArrayPool<byte> FilePathPool = ArrayPool<byte>.Shared;
+        private static TreeLineByHashComparer _treeLineByHashComparer = new TreeLineByHashComparer();
 
         private static Tree.TreeLine RemoveFileFromLine(string vcsPath,
             Tree.TreeLine line,
@@ -154,6 +161,12 @@ namespace GitRewrite.Delete
                     if (!filesToRemove.DeleteFile(line.FileNameBytes.Span, currentPath))
                         resultingLines.Add(line);
                 }
+
+            if (resultingLines.Count == tree.Lines.Count && resultingLines.SequenceEqual(tree.Lines, _treeLineByHashComparer))
+            {
+                rewrittenTrees.TryAdd(tree.Hash, tree.Hash);
+                return tree.Hash;
+            }
 
             var fixedTree = Tree.GetFixedTree(resultingLines);
             if (fixedTree.Hash != tree.Hash)
