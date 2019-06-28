@@ -14,6 +14,12 @@ namespace GitRewrite.GitObjects
         private readonly List<ObjectHash> _parents;
         private readonly Memory<byte> _treeHash;
 
+        private static readonly byte[] TreePrefix = "tree ".Select(x => (byte) x).ToArray();
+        private static readonly byte[] ParentPrefix = "parent ".Select(x => (byte) x).ToArray();
+        private static readonly byte[] AuthorPrefix = "author ".Select(x => (byte) x).ToArray();
+        private static readonly byte[] CommitterPrefix = "committer ".Select(x => (byte) x).ToArray();
+        private static readonly byte[] GpgSigPrefix = "gpgsig ".Select(x => (byte) x).ToArray();
+
         public Commit(ObjectHash hash, byte[] bytes) : base(hash, GitObjectType.Commit)
         {
             _content = bytes;
@@ -23,11 +29,12 @@ namespace GitRewrite.GitObjects
             var nextNewLine = content.Span.IndexOf<byte>(10);
             while (nextNewLine != -1)
             {
-                if (StartsWith(content, "tree "))
+                var contentSpan = content.Span;
+                if (contentSpan.StartsWith(TreePrefix))
                 {
                     _treeHash = content.Slice(0, nextNewLine);
                 }
-                else if (StartsWith(content, "parent "))
+                else if (contentSpan.StartsWith(ParentPrefix))
                 {
                     _parents.Add(new ObjectHash(content.Span.Slice(7, nextNewLine - 7)));
                 }
@@ -36,15 +43,15 @@ namespace GitRewrite.GitObjects
                     _commitMessage = content.Slice(1);
                     break;
                 }
-                else if (StartsWith(content, "author "))
+                else if (contentSpan.StartsWith(AuthorPrefix))
                 {
                     _authorLine = content.Slice(0, nextNewLine);
                 }
-                else if (StartsWith(content, "committer "))
+                else if (contentSpan.StartsWith(CommitterPrefix))
                 {
                     _committerLine = content.Slice(0, nextNewLine);
                 }
-                else if (StartsWith(content, "gpgsig "))
+                else if (contentSpan.StartsWith(GpgSigPrefix))
                 {
                     // gpgsig are not really handled, instead a gpgsig is not written back when rewriting the object
                     var pgpSignatureEnd = content.Span.IndexOf(PgpSignatureEnd);
@@ -103,8 +110,6 @@ namespace GitRewrite.GitObjects
 
         public override byte[] SerializeToBytes()
             => _content;
-
-        private static readonly byte[] TreePrefix = {(byte) 't', (byte) 'r', (byte) 'e', (byte) 'e', (byte) ' '};
 
         public static byte[] GetSerializedCommitWithChangedTreeAndParents(Commit commit, ObjectHash treeHash,
             IEnumerable<ObjectHash> parents)
