@@ -78,7 +78,22 @@ namespace GitRewrite.IO
 
         private static bool IsBlob(byte[] buffer) =>
             buffer[0] == 'b' && buffer[1] == 'l' && buffer[2] == 'o' && buffer[3] == 'b' && buffer[4] == ' ';
-        
+
+        public static void UnpackTo(MemoryMappedViewAccessor fileView, PackObject packObject,
+            in Span<byte> buffer, int additionalOffset = 0)
+        {
+            var realOffset = packObject.Offset + packObject.HeaderLength + additionalOffset + 2;
+
+            var safeHandle = fileView.SafeMemoryMappedViewHandle;
+            long size = Math.Min(packObject.DataSize + 512, (long)safeHandle.ByteLength - realOffset);
+
+            using (var unmanagedMemoryStream = new UnmanagedMemoryStream(safeHandle, realOffset, size))
+            using (var stream = new DeflateStream(unmanagedMemoryStream, CompressionMode.Decompress, true))
+            {
+                stream.Read(buffer);
+            }
+        }
+
         public static byte[] Unpack(MemoryMappedViewAccessor fileView, PackObject packObject, int additionalOffset = 0)
         {
             var realOffset = packObject.Offset + packObject.HeaderLength + additionalOffset + 2;
