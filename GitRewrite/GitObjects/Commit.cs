@@ -14,12 +14,6 @@ namespace GitRewrite.GitObjects
         private readonly List<ObjectHash> _parents;
         private readonly Memory<byte> _treeHash;
 
-        private static readonly byte[] TreePrefix = "tree ".Select(x => (byte) x).ToArray();
-        private static readonly byte[] ParentPrefix = "parent ".Select(x => (byte) x).ToArray();
-        private static readonly byte[] AuthorPrefix = "author ".Select(x => (byte) x).ToArray();
-        private static readonly byte[] CommitterPrefix = "committer ".Select(x => (byte) x).ToArray();
-        private static readonly byte[] GpgSigPrefix = "gpgsig ".Select(x => (byte) x).ToArray();
-
         public Commit(ObjectHash hash, byte[] bytes) : base(hash, GitObjectType.Commit)
         {
             _content = bytes;
@@ -30,11 +24,11 @@ namespace GitRewrite.GitObjects
             while (nextNewLine != -1)
             {
                 var contentSpan = content.Span;
-                if (contentSpan.StartsWith(TreePrefix))
+                if (contentSpan.StartsWith(ObjectPrefixes.TreePrefix))
                 {
                     _treeHash = content.Slice(0, nextNewLine);
                 }
-                else if (contentSpan.StartsWith(ParentPrefix))
+                else if (contentSpan.StartsWith(ObjectPrefixes.ParentPrefix))
                 {
                     _parents.Add(new ObjectHash(content.Span.Slice(7, nextNewLine - 7)));
                 }
@@ -43,15 +37,15 @@ namespace GitRewrite.GitObjects
                     _commitMessage = content.Slice(1);
                     break;
                 }
-                else if (contentSpan.StartsWith(AuthorPrefix))
+                else if (contentSpan.StartsWith(ObjectPrefixes.AuthorPrefix))
                 {
                     _authorLine = content.Slice(0, nextNewLine);
                 }
-                else if (contentSpan.StartsWith(CommitterPrefix))
+                else if (contentSpan.StartsWith(ObjectPrefixes.CommitterPrefix))
                 {
                     _committerLine = content.Slice(0, nextNewLine);
                 }
-                else if (contentSpan.StartsWith(GpgSigPrefix))
+                else if (contentSpan.StartsWith(ObjectPrefixes.GpgSigPrefix))
                 {
                     // gpgsig are not really handled, instead a gpgsig is not written back when rewriting the object
                     var pgpSignatureEnd = content.Span.IndexOf(PgpSignatureEnd);
@@ -115,7 +109,7 @@ namespace GitRewrite.GitObjects
             IEnumerable<ObjectHash> parents)
         {
             var tree = new byte[45];
-            Array.Copy(TreePrefix, tree, 5);
+            Array.Copy(ObjectPrefixes.TreePrefix, tree, 5);
             var hashString = treeHash.ToString();
             for (int i = 0; i < hashString.Length; i++)
             {
@@ -147,23 +141,18 @@ namespace GitRewrite.GitObjects
                 resultBuffer[bytesCopied++] = (byte) '\n';
             }
 
-            SpanToArrayCopy(author.Span, resultBuffer, bytesCopied);
+            author.Span.CopyTo(resultBuffer.AsSpan(bytesCopied, author.Length));
             bytesCopied += author.Length;
             resultBuffer[bytesCopied++] = (byte) '\n';
 
-            SpanToArrayCopy(committer.Span, resultBuffer, bytesCopied);
+            committer.Span.CopyTo(resultBuffer.AsSpan(bytesCopied, committer.Length));
             bytesCopied += committer.Length;
             resultBuffer[bytesCopied++] = (byte) '\n';
             resultBuffer[bytesCopied++] = (byte) '\n';
 
-            SpanToArrayCopy(message.Span, resultBuffer, bytesCopied);
+            message.Span.CopyTo(resultBuffer.AsSpan(bytesCopied, message.Length));
 
             return resultBuffer;
-        }
-
-        private static void SpanToArrayCopy<T>(in ReadOnlySpan<T> source, T[] destination, int destinationIndex)
-        {
-            for (var i = 0; i < source.Length; i++) destination[i + destinationIndex] = source[i];
         }
 
         public override bool Equals(object obj) => ReferenceEquals(this, obj) || obj is Commit other && Equals(other);

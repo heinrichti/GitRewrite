@@ -13,8 +13,6 @@ namespace GitRewrite
 {
     public class Program
     {
-
-
         static void Main(string[] args)
         {
             if (!CommandLineOptions.TryParse(args, out var options))

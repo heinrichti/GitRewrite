@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Text;
+using GitRewrite.GitObjects;
 
 namespace GitRewrite.Delete
 {
     class FolderExactDeletionStrategy : IFolderDeletionStrategy
     {
-        private readonly ReadOnlyMemory<byte> _fileName;
+        private readonly Memory<byte> _folderName;
 
-        public FolderExactDeletionStrategy(string fileName) => _fileName = Encoding.UTF8.GetBytes(fileName);
+        public FolderExactDeletionStrategy(string fileName) => _folderName = Encoding.UTF8.GetBytes(fileName);
 
-        public bool DeleteObject(in ReadOnlySpan<byte> currentPath) => _fileName.Span.SequenceEqual(currentPath);
+        public bool DeleteObject(in ReadOnlySpan<byte> currentPath) => _folderName.Span.SpanEquals(currentPath);
     }
 }

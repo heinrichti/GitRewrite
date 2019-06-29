@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using GitRewrite.GitObjects;
 
 namespace GitRewrite.Delete
 {
@@ -9,7 +10,7 @@ namespace GitRewrite.Delete
 
         public FileSimpleDeleteStrategy(string fileName) => _fileName = Encoding.UTF8.GetBytes(fileName);
 
-        public bool DeleteObject(in ReadOnlySpan<byte> fileName, ReadOnlySpan<byte> currentPath)
-            => fileName.SequenceEqual(_fileName);
+        public bool DeleteObject(in ReadOnlySpan<byte> fileName, ReadOnlySpan<byte> currentPath) =>
+            fileName.SpanEquals(_fileName);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 
 namespace GitRewrite.GitObjects
 {
@@ -38,17 +39,7 @@ namespace GitRewrite.GitObjects
 
         public override string ToString() => Hash.ByteArrayToHexViaLookup32(Bytes);
 
-        public bool Equals(ObjectHash other)
-        {
-            var bytes = Bytes;
-            var otherBytes = other.Bytes;
-           
-            for (var i = bytes.Length - 1; i >= 0; i--)
-                if (bytes[i] != otherBytes[i])
-                    return false;
-
-            return true;
-        }
+        public bool Equals(ObjectHash other) => Bytes.AsSpan().SpanEquals(other.Bytes.AsSpan());
 
         public override bool Equals(object obj) => obj is ObjectHash other && Equals(other);
 

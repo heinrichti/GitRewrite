@@ -9,7 +9,7 @@ namespace GitRewrite.GitObjects
     {
         public Tree(ObjectHash hash, ReadOnlyMemory<byte> bytes) : base(hash, GitObjectType.Tree)
         {
-            var nullTerminatorIndex = IndexOf(bytes.Span, '\0');
+            var nullTerminatorIndex = bytes.Span.IndexOf((byte)'\0');
 
             var lines = new List<TreeLine>();
 
@@ -24,7 +24,8 @@ namespace GitRewrite.GitObjects
                 lines.Add(new TreeLine(textSpan, objectHash));
 
                 bytes = bytes.Slice(nullTerminatorIndex + 21);
-                nullTerminatorIndex = IndexOf(bytes.Span, '\0');
+
+                nullTerminatorIndex = bytes.Span.IndexOf((byte)'\0');
             }
 
             Lines = lines;
@@ -76,7 +77,7 @@ namespace GitRewrite.GitObjects
                 while (it.MoveNext())
                 {
                     var treeLine = it.Current;
-                    if (treeLine.TextBytes.Span.SequenceEqual(lastLine.TextBytes.Span))
+                    if (treeLine.TextBytes.Span.SpanEquals(lastLine.TextBytes.Span))
                         return true;
                     lastLine = treeLine;
                 }
@@ -102,7 +103,7 @@ namespace GitRewrite.GitObjects
                 while (it.MoveNext())
                 {
                     var treeLine = it.Current;
-                    if (treeLine.TextBytes.Span.SequenceEqual(distinctTreeLines[i++ - 1].TextBytes.Span))
+                    if (treeLine.TextBytes.Span.SpanEquals(distinctTreeLines[i++ - 1].TextBytes.Span))
                         --i;
                     else
                         distinctTreeLines.Add(treeLine);

@@ -95,10 +95,6 @@ namespace GitRewrite.Delete
 
                             resultingLines.Add(new Tree.TreeLine(line.TextBytes, newTreeHash));
                         }
-                        else
-                        {
-                            
-                        }
                     }
                 }
                 else
