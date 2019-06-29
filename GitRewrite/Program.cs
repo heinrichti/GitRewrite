@@ -13,63 +13,12 @@ namespace GitRewrite
 {
     public class Program
     {
-        static void PrintHelp()
-        {
-            Console.WriteLine("GitRewrite [options] repository_path");
-            Console.WriteLine();
-            Console.WriteLine("Options:");
-            Console.WriteLine("-e");
-            Console.WriteLine("  Removes empty commits from the repository.");
-            Console.WriteLine();
 
-            Console.WriteLine("-d [filePattern...], --delete-files [filePattern...]");
-            Console.WriteLine("  Delete files from the repository.");
-            Console.WriteLine("  [filePattern...] is a list of comma separated patterns. Option can be defined multiple times.");
-            Console.WriteLine("  If filePattern is filename, then the file with the name filename will be deleted from all directories.");
-            Console.WriteLine("  If filePattern is filename*, then all files starting with filename will be deleted from all directories.");
-            Console.WriteLine("  If filePattern is *filename, then all files ending with filename will be deleted from all directories.");
-            Console.WriteLine("  If filePattern is /path/to/filename, then the file will be delete only in the exact directory.");
-            Console.WriteLine();
-
-            Console.WriteLine("--fix-trees");
-            Console.WriteLine("  Checks for trees with duplicate entries. Rewrites the tree taking only the first entry.");
-            Console.WriteLine();
-
-            Console.WriteLine("--contributer-names");
-            Console.WriteLine("  Writes all authors and committers to stdout");
-            Console.WriteLine();
-        }
 
         static void Main(string[] args)
         {
-            CommandLineOptions options;
-            try
+            if (!CommandLineOptions.TryParse(args, out var options))
             {
-                options = new CommandLineOptions(args);
-            }
-            catch (Exception )
-            {
-                PrintHelp();
-                return;
-            }
-
-            var optionsSet = 0;
-            optionsSet += options.FixTrees ? 1 : 0;
-            optionsSet += options.FilesToDelete.Any() ? 1 : 0;
-            optionsSet += options.RemoveEmptyCommits ? 1 : 0;
-            optionsSet += options.ListContributerNames ? 1 : 0;
-
-            if (optionsSet > 1)
-            {
-                Console.WriteLine("Cannot mix operations. Only choose one operation at a time (multiple file deletes are allowed).");
-                Console.WriteLine();
-                PrintHelp();
-                return;
-            }
-
-            if (optionsSet == 0 || string.IsNullOrWhiteSpace(options.RepositoryPath))
-            {
-                PrintHelp();
                 return;
             }
 
@@ -83,9 +32,9 @@ namespace GitRewrite
                 if (rewrittenCommits.Any())
                     Refs.Update(options.RepositoryPath, rewrittenCommits);
             }
-            else if (options.FilesToDelete.Any())
+            else if (options.FilesToDelete.Any() || options.FoldersToDelete.Any())
             {
-                DeleteFiles.Run(options.RepositoryPath, options.FilesToDelete);
+                DeleteObjects.Run(options.RepositoryPath, options.FilesToDelete, options.FoldersToDelete);
             }
             else if (options.RemoveEmptyCommits)
             {

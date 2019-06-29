@@ -3,14 +3,14 @@ using System.Text;
 
 namespace GitRewrite.Delete
 {
-    internal class EndsWithDeletionStrategy : IFileDeleteStrategy
+    internal class FileEndsWithDeletionStrategy : IFileDeletionStrategy
     {
         private readonly byte[] _endBytes;
 
-        public EndsWithDeletionStrategy(string filePattern) =>
+        public FileEndsWithDeletionStrategy(string filePattern) =>
             _endBytes = Encoding.UTF8.GetBytes(filePattern.Substring(1));
 
-        public bool DeleteFile(in ReadOnlySpan<byte> fileName, ReadOnlySpan<byte> currentPath) =>
+        public bool DeleteObject(in ReadOnlySpan<byte> fileName, ReadOnlySpan<byte> currentPath) =>
             fileName.EndsWith(_endBytes);
     }
 }
