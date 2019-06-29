@@ -27,29 +27,6 @@ namespace GitRewrite.GitObjects
             return Hash.Equals(other.Hash);
         }
 
-        protected static int IndexOf(in ReadOnlySpan<byte> byteSpan, char c)
-        {
-            for (var i = 0; i < byteSpan.Length; i++)
-                if (byteSpan[i] == c)
-                    return i;
-
-            return -1;
-        }
-
-        protected static bool StartsWith(in ReadOnlyMemory<byte> memory, string str)
-        {
-            if (str.Length > memory.Length)
-                return false;
-
-            var span = memory.Span;
-
-            for (var i = str.Length - 1; i >= 0; i--)
-                if (span[i] != str[i])
-                    return false;
-
-            return true;
-        }
-
         public abstract byte[] SerializeToBytes();
 
         public override bool Equals(object obj)
