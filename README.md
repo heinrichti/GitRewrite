@@ -21,6 +21,12 @@ Simple wildcards for the beginning and the end of the filename are supported, li
 It also lets you specify the complete path to the file instead of only a file name. 
 For this the path has to be prefixed by a forward slash and the path seperator also is a forward slash: /path/to/file.txt
 
+### Deleting folders
+```
+GitRewrite -D folder1,folder2,folder3
+```
+Patterns and performance characteristics are the same as for deleting files. Can be used in conjunction with -d.
+
 ### Remove empty commits
 Another useful feature is to remove empty commits. 
 For this tool empty commits are defined as commits that have only a single parent and the same tree as their parent.

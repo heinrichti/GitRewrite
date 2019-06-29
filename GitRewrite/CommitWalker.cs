@@ -17,10 +17,10 @@ namespace GitRewrite
                 if (!commitsAlreadySeen.Add(commit.Hash))
                     continue;
 
+                yield return commit;
+
                 foreach (var parent in commit.Parents)
                     commits.Push(GitObjectFactory.ReadCommit(vcsPath, parent));
-
-                yield return commit;
             }
         }
 
