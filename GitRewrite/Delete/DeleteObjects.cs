@@ -3,6 +3,8 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using GitRewrite.GitObjects;
 using GitRewrite.IO;
 
@@ -20,9 +22,13 @@ namespace GitRewrite.Delete
 
             var rewrittenCommits = RemoveObjectsFromTree(repositoryPath, fileDeleteStrategies, folderDeleteStrategies,
                 relevantPathes);
+
             if (rewrittenCommits.Any())
                 Refs.Update(repositoryPath, rewrittenCommits);
         }
+
+        private static readonly BlockingCollection<(byte[] Bytes, ObjectHash Hash)> ObjectsToWrite =
+            new BlockingCollection<(byte[] Bytes, ObjectHash Hash)>();
 
         public static Dictionary<ObjectHash, ObjectHash> RemoveObjectsFromTree(string vcsPath,
             FileDeletionStrategies filesToDelete, FolderDeletionStrategies foldersToDelete,
@@ -30,6 +36,14 @@ namespace GitRewrite.Delete
         {
             var rewrittenCommits = new Dictionary<ObjectHash, ObjectHash>();
             var rewrittenTrees = new ConcurrentDictionary<ObjectHash, ObjectHash>();
+
+            var writeThread = new Thread(collection =>
+            {
+                var commits = (BlockingCollection<(byte[] Bytes, ObjectHash Hash)>)collection;
+                foreach (var commit in commits.GetConsumingEnumerable())
+                    HashContent.WriteFile(vcsPath, commit.Bytes, commit.Hash.ToString());
+            });
+            writeThread.Start(ObjectsToWrite);
 
             foreach (var commit in CommitWalker
                 .CommitsInOrder(vcsPath))
@@ -46,11 +60,15 @@ namespace GitRewrite.Delete
 
                     if (newCommitHash != commit.Hash)
                     {
-                        HashContent.WriteFile(vcsPath, newCommitBytes, newCommitHash.ToString());
+                        ObjectsToWrite.Add((newCommitBytes, newCommitHash));
                         rewrittenCommits.TryAdd(commit.Hash, newCommitHash);
                     }
                 }
             }
+
+            ObjectsToWrite.CompleteAdding();
+            writeThread.Join();
+            ObjectsToWrite.Dispose();
 
             return rewrittenCommits;
         }
@@ -153,7 +171,10 @@ namespace GitRewrite.Delete
 
             var fixedTree = Tree.GetFixedTree(resultingLines);
             if (fixedTree.Hash != tree.Hash)
-                HashContent.WriteObject(vcsPath, fixedTree);
+            {
+                var bytes = GitObjectFactory.GetBytesWithHeader(GitObjectType.Tree, fixedTree.SerializeToBytes());
+                ObjectsToWrite.Add((bytes, fixedTree.Hash));
+            }
 
             rewrittenTrees.TryAdd(treeHash, fixedTree.Hash);
 
