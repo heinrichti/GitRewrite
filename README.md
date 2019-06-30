@@ -20,6 +20,7 @@ Deleting should be pretty fast, in my tests it even outperformed the bfg repo cl
 Simple wildcards for the beginning and the end of the filename are supported, like &ast;.zip.
 It also lets you specify the complete path to the file instead of only a file name. 
 For this the path has to be prefixed by a forward slash and the path seperator also is a forward slash: /path/to/file.txt
+Specifying only files with complete path will result in much better performance as not all subtrees have to be checked.
 
 ### Deleting folders
 ```

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace GitRewrite.Delete
 {
@@ -15,13 +16,19 @@ namespace GitRewrite.Delete
                 if (objectPattern[0] == '*')
                     _strategies.Add(new FolderEndsWithDeletionStrategy(objectPattern));
                 else if (objectPattern[0] == '/')
-                    _strategies.Add(new FolderExactDeletionStrategy(objectPattern));
+                {
+                    var bytes = Encoding.UTF8.GetBytes(objectPattern);
+                    _strategies.Add(new FolderExactDeletionStrategy(bytes));
+                    RelevantPaths.Add(bytes);
+                }
                 else if (objectPattern[objectPattern.Length - 1] == '*')
                     _strategies.Add(new FolderStartsWithDeletionStrategy(objectPattern));
                 else 
                     _strategies.Add(new FolderSimpleDeleteStrategy(objectPattern));
             }
         }
+
+        public List<byte[]> RelevantPaths { get; } = new List<byte[]>();
 
         public bool DeleteObject(ReadOnlySpan<byte> currentPath)
         {

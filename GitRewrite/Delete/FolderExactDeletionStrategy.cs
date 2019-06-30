@@ -8,7 +8,7 @@ namespace GitRewrite.Delete
     {
         private readonly Memory<byte> _folderName;
 
-        public FolderExactDeletionStrategy(string fileName) => _folderName = Encoding.UTF8.GetBytes(fileName);
+        public FolderExactDeletionStrategy(byte[] fileName) => _folderName = fileName;
 
         public bool DeleteObject(in ReadOnlySpan<byte> currentPath) => _folderName.Span.SpanEquals(currentPath);
     }
