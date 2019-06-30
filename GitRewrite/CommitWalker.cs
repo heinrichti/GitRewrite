@@ -64,7 +64,8 @@ namespace GitRewrite
 
                  if (gitObject.Type == GitObjectType.Commit)
                      result.Push((Commit)gitObject);
-                 else
+                 // Tags pointing to trees are ignored
+                 else if (gitObject.Type != GitObjectType.Tree)
                      throw new Exception();
              });
 
