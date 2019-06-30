@@ -14,13 +14,19 @@ namespace GitRewrite.Delete
         {
             var fileDeleteStrategies = new FileDeletionStrategies(filesToDelete);
             var folderDeleteStrategies = new FolderDeletionStrategies(foldersToDelete);
-            var rewrittenCommits = RemoveObjectsFromTree(repositoryPath, fileDeleteStrategies, folderDeleteStrategies);
+
+            var relevantPathes =
+                fileDeleteStrategies.RelevantPaths.Union(folderDeleteStrategies.RelevantPaths).ToList();
+
+            var rewrittenCommits = RemoveObjectsFromTree(repositoryPath, fileDeleteStrategies, folderDeleteStrategies,
+                relevantPathes);
             if (rewrittenCommits.Any())
                 Refs.Update(repositoryPath, rewrittenCommits);
         }
 
         public static Dictionary<ObjectHash, ObjectHash> RemoveObjectsFromTree(string vcsPath,
-            FileDeletionStrategies filesToDelete, FolderDeletionStrategies foldersToDelete)
+            FileDeletionStrategies filesToDelete, FolderDeletionStrategies foldersToDelete,
+            List<byte[]> relevantPaths)
         {
             var rewrittenCommits = new Dictionary<ObjectHash, ObjectHash>();
             var rewrittenTrees = new ConcurrentDictionary<ObjectHash, ObjectHash>();
@@ -28,7 +34,8 @@ namespace GitRewrite.Delete
             foreach (var commit in CommitWalker
                 .CommitsInOrder(vcsPath))
             {
-                var newTreeHash = RemoveObjectFromTree(vcsPath, commit.TreeHash, filesToDelete, foldersToDelete, rewrittenTrees, new byte[0]);
+                var newTreeHash = RemoveObjectFromTree(vcsPath, commit.TreeHash, filesToDelete, foldersToDelete,
+                    rewrittenTrees, new byte[0], relevantPaths);
                 if (newTreeHash != commit.TreeHash)
                 {
                     var newCommit = Commit.GetSerializedCommitWithChangedTreeAndParents(commit, newTreeHash,
@@ -51,16 +58,49 @@ namespace GitRewrite.Delete
         private static readonly ArrayPool<byte> FilePathPool = ArrayPool<byte>.Shared;
         private static readonly TreeLineByHashComparer TreeLineByHashComparer = new TreeLineByHashComparer();
 
+        private static bool IsPathRelevant(in ReadOnlySpan<byte> currentPath, List<byte[]> relevantPathes)
+        {
+            if (currentPath.Length == 0 || !relevantPathes.Any())
+                return true;
+
+            for (int i = relevantPathes.Count - 1; i >= 0; i--)
+            {
+                var path = relevantPathes[i];
+
+                if (currentPath.Length > path.Length)
+                    continue;
+
+                var isRelevant = true;
+                for (int j = currentPath.Length - 1; j >= 0; j--)
+                {
+                    if (currentPath[j] != path[j])
+                    {
+                        isRelevant = false;
+                        break;
+                    }
+                }
+
+                if (isRelevant) 
+                    return true;
+            }
+
+            return false;
+        }
+
         private static ObjectHash RemoveObjectFromTree(
             string vcsPath,
             ObjectHash treeHash,
             FileDeletionStrategies filesToRemove,
             FolderDeletionStrategies foldersToRemove,
             ConcurrentDictionary<ObjectHash, ObjectHash> rewrittenTrees,
-            ReadOnlySpan<byte> currentPath)
+            in ReadOnlySpan<byte> currentPath,
+            List<byte[]> relevantPathes)
         {
             if (rewrittenTrees.TryGetValue(treeHash, out var rewrittenHash))
                 return rewrittenHash;
+
+            if (!IsPathRelevant(currentPath, relevantPathes))
+                return treeHash;
 
             var tree = GitObjectFactory.ReadTree(vcsPath, treeHash);
             var resultingLines = new List<Tree.TreeLine>();
@@ -89,7 +129,8 @@ namespace GitRewrite.Delete
                                 filesToRemove,
                                 foldersToRemove,
                                 rewrittenTrees,
-                                path);
+                                path,
+                                relevantPathes);
 
                             FilePathPool.Return(rentedPathBytes);
 
