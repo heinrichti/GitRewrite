@@ -32,11 +32,6 @@ namespace GitRewrite.GitObjects
                 {
                     _parents.Add(new ObjectHash(content.Span.Slice(7, nextNewLine - 7)));
                 }
-                else if (content.Span[0] == '\n')
-                {
-                    _commitMessage = content.Slice(1);
-                    break;
-                }
                 else if (contentSpan.StartsWith(ObjectPrefixes.AuthorPrefix))
                 {
                     _authorLine = content.Slice(0, nextNewLine);
@@ -54,7 +49,9 @@ namespace GitRewrite.GitObjects
                 }
                 else
                 {
-                    throw new Exception("Unknown line");
+                    // We view everything that is not defined above as commit message
+                    _commitMessage = content.Slice(1);
+                    break;
                 }
 
                 content = content.Slice(nextNewLine + 1);
