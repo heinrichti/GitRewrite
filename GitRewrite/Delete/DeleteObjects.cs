@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using GitRewrite.GitObjects;
 using GitRewrite.IO;
 
@@ -45,23 +44,29 @@ namespace GitRewrite.Delete
             });
             writeThread.Start(ObjectsToWrite);
 
-            foreach (var commit in CommitWalker
-                .CommitsInOrder(vcsPath))
+            foreach (var removalResult in CommitWalker
+                .CommitsInOrder(vcsPath)
+                .AsParallel()
+                .AsOrdered()
+                .Select(commit =>
+                    (NewTreeHash:
+                    RemoveObjectFromTree(vcsPath, commit.TreeHash, filesToDelete, foldersToDelete,
+                        rewrittenTrees, new byte[0], relevantPaths), Commit: commit))
+                .Where(result => result.NewTreeHash != result.Commit.TreeHash)
+            )
             {
-                var newTreeHash = RemoveObjectFromTree(vcsPath, commit.TreeHash, filesToDelete, foldersToDelete,
-                    rewrittenTrees, new byte[0], relevantPaths);
-                if (newTreeHash != commit.TreeHash)
+                if (removalResult.NewTreeHash != removalResult.Commit.TreeHash)
                 {
-                    var newCommit = Commit.GetSerializedCommitWithChangedTreeAndParents(commit, newTreeHash,
-                        Hash.GetRewrittenParentHashes(commit.Parents, rewrittenCommits));
+                    var newCommit = Commit.GetSerializedCommitWithChangedTreeAndParents(removalResult.Commit, removalResult.NewTreeHash,
+                        Hash.GetRewrittenParentHashes(removalResult.Commit.Parents, rewrittenCommits));
 
                     var newCommitBytes = GitObjectFactory.GetBytesWithHeader(GitObjectType.Commit, newCommit);
                     var newCommitHash = new ObjectHash(Hash.Create(newCommitBytes));
 
-                    if (newCommitHash != commit.Hash)
+                    if (newCommitHash != removalResult.Commit.Hash)
                     {
                         ObjectsToWrite.Add((newCommitBytes, newCommitHash));
-                        rewrittenCommits.TryAdd(commit.Hash, newCommitHash);
+                        rewrittenCommits.TryAdd(removalResult.Commit.Hash, newCommitHash);
                     }
                 }
             }
