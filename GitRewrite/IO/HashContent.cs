@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Buffers;
 using System.IO;
 using System.IO.Compression;
 using System.IO.MemoryMappedFiles;
 using GitRewrite.GitObjects;
+using Microsoft.IO;
 
 namespace GitRewrite.IO
 {
     public static class HashContent
     {
-        private const int BufferLength = 1024 * 1024;
-
         #region - Methoden oeffentlich -
 
         public static void WriteFile(string basePath, byte[] bytes, string hash)
@@ -47,37 +45,25 @@ namespace GitRewrite.IO
             WriteFile(basePath, bytesWithHeader, gitObject.Hash.ToString());
         }
 
-        private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
+        private static  readonly RecyclableMemoryStreamManager MemoryManager = new RecyclableMemoryStreamManager();
 
         public static byte[] FromFile(string basePath, string hashCode)
         {
             var filePath = Path.Combine(basePath, $"objects/{hashCode.Substring(0, 2)}/{hashCode.Substring(2)}");
 
-            var targetBuffer = BufferPool.Rent(BufferLength);
-
-            try
+            using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            using (var stream = new DeflateStream(fileStream, CompressionMode.Decompress, false))
+            using (var memoryStream = new RecyclableMemoryStream(MemoryManager, hashCode))
             {
-                int bytesRead;
-                using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
-                using (var stream = new DeflateStream(fileStream, CompressionMode.Decompress, false))
-                {
-                    fileStream.Seek(2, SeekOrigin.Begin);
-                    bytesRead = stream.Read(targetBuffer);
-                    // TODO properly handle bigger blobs
-                    if (bytesRead == BufferLength && !IsBlob(targetBuffer))
-                        throw new Exception("Buffer too small");
-                }
+                fileStream.Seek(2, SeekOrigin.Begin);
+                stream.CopyTo(memoryStream);
 
-                return targetBuffer.AsSpan(0, bytesRead).ToArray();
-            }
-            finally
-            {
-                BufferPool.Return(targetBuffer);
+                var result = new byte[memoryStream.Length];
+                Array.Copy(memoryStream.GetBuffer(), result, memoryStream.Length);
+
+                return result;
             }
         }
-
-        private static bool IsBlob(byte[] buffer) =>
-            buffer[0] == 'b' && buffer[1] == 'l' && buffer[2] == 'o' && buffer[3] == 'b' && buffer[4] == ' ';
 
         public static void UnpackTo(MemoryMappedViewAccessor fileView, PackObject packObject,
             in Span<byte> buffer, int additionalOffset = 0)
