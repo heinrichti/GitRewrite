@@ -38,7 +38,7 @@ namespace GitRewrite.GitObjects
 
         public override string ToString() => Hash.ByteArrayToHexViaLookup32(Bytes);
 
-        public bool Equals(ObjectHash other) => Bytes.SequenceEquals(other.Bytes);
+        public bool Equals(ObjectHash other) => _hashCode == other._hashCode && Bytes.SequenceEquals(other.Bytes);
 
         public override bool Equals(object obj) => obj is ObjectHash other && Equals(other);
 
