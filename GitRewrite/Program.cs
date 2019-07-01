@@ -41,7 +41,8 @@ namespace GitRewrite
             }
             else if (options.ListContributerNames)
             {
-                foreach (var contributer in GetContributers(options.RepositoryPath).AsParallel()
+                foreach (var contributer in GetContributers(options.RepositoryPath)
+                    .AsParallel()
                     .OrderBy(x => x))
                     Console.WriteLine(contributer);
             }
@@ -146,7 +147,8 @@ namespace GitRewrite
         }
 
         private static IEnumerable<string> GetContributers(string vcsPath)
-            => CommitWalker.CommitsRandomOrder(vcsPath).SelectMany(commit => new[] {commit.GetAuthorName(), commit.GetCommitterName()});
+            => CommitWalker.CommitsRandomOrder(vcsPath).SelectMany(commit => new[] {commit.GetAuthorName(), commit.GetCommitterName()})
+                .Distinct();
 
         private static Dictionary<ObjectHash, ObjectHash> RemoveEmptyCommits(string vcsPath)
         {
