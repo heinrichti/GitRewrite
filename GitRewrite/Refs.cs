@@ -136,6 +136,12 @@ namespace GitRewrite
             {
                 var tag = (Tag) gitObject;
 
+                if (tag.PointsToTree)
+                {
+                    // Do not touch tags pointing to trees right now as this is not properly implemented yet
+                    return tag.Hash;
+                }
+
                 var rewrittenObjectHash = tag.PointsToTag
                     ? RewriteRef(vcsPath, tag.Object, "", rewrittenCommits)
                     : GetRewrittenCommitHash(new ObjectHash(tag.Object), rewrittenCommits);
