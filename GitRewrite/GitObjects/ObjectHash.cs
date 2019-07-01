@@ -1,15 +1,15 @@
 ﻿using System;
-using System.Linq;
 
 namespace GitRewrite.GitObjects
 {
     public struct ObjectHash : IEquatable<ObjectHash>
     {
         private readonly int _hashCode;
+        private const int ByteHashLength = 20;
 
         public ObjectHash(byte[] hash)
         {
-            if (hash.Length != 20)
+            if (hash.Length != ByteHashLength)
                 throw new ArgumentException();
 
             Bytes = hash;
@@ -17,7 +17,7 @@ namespace GitRewrite.GitObjects
             unchecked
             {
                 _hashCode = 0;
-                for (var index = hash.Length - 1; index >= 0; index--)
+                for (var index = 0; index < ByteHashLength; index++)
                 {
                     var b = hash[index];
                     _hashCode = (_hashCode * 31) ^ b;
@@ -32,14 +32,13 @@ namespace GitRewrite.GitObjects
         public ObjectHash(in ReadOnlySpan<byte> hashStringAsBytes)
             : this(Hash.HashStringToByteArray(hashStringAsBytes))
         {
-
         }
 
         public byte[] Bytes { get; }
 
         public override string ToString() => Hash.ByteArrayToHexViaLookup32(Bytes);
 
-        public bool Equals(ObjectHash other) => Bytes.AsSpan().SpanEquals(other.Bytes.AsSpan());
+        public bool Equals(ObjectHash other) => Bytes.SequenceEquals(other.Bytes);
 
         public override bool Equals(object obj) => obj is ObjectHash other && Equals(other);
 
