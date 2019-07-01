@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using GitRewrite.Delete;
 using GitRewrite.GitObjects;
 using GitRewrite.IO;
@@ -42,8 +41,7 @@ namespace GitRewrite
             }
             else if (options.ListContributerNames)
             {
-                foreach (var contributer in GetContributers(options.RepositoryPath)
-                    .Select(contributer => Encoding.UTF8.GetString(contributer.Span))
+                foreach (var contributer in GetContributers(options.RepositoryPath).AsParallel()
                     .OrderBy(x => x))
                     Console.WriteLine(contributer);
             }
@@ -147,9 +145,8 @@ namespace GitRewrite
             }
         }
 
-        private static IEnumerable<ReadOnlyMemory<byte>> GetContributers(string vcsPath)
-            => CommitWalker.CommitsRandomOrder(vcsPath).SelectMany(commit => new[] {commit.AuthorName, commit.CommitterName})
-                .Distinct(new ByteMemoryEqualityComparer());
+        private static IEnumerable<string> GetContributers(string vcsPath)
+            => CommitWalker.CommitsRandomOrder(vcsPath).SelectMany(commit => new[] {commit.GetAuthorName(), commit.GetCommitterName()});
 
         private static Dictionary<ObjectHash, ObjectHash> RemoveEmptyCommits(string vcsPath)
         {

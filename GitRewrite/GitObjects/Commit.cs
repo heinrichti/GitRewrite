@@ -20,7 +20,7 @@ namespace GitRewrite.GitObjects
             var content = bytes.AsMemory();
             _parents = new List<ObjectHash>();
 
-            var nextNewLine = content.Span.IndexOf<byte>(10);
+            var nextNewLine = content.Span.IndexOf((byte) '\n');
             while (nextNewLine != -1)
             {
                 var contentSpan = content.Span;
@@ -50,7 +50,7 @@ namespace GitRewrite.GitObjects
                 else
                 {
                     // We view everything that is not defined above as commit message
-                    _commitMessage = content.Slice(1);
+                    _commitMessage = content;
                     break;
                 }
 
@@ -61,11 +61,15 @@ namespace GitRewrite.GitObjects
 
         private static readonly byte[] PgpSignatureEnd = "-----END PGP SIGNATURE-----".Select(c => (byte) c).ToArray();
 
-        public ReadOnlyMemory<byte> CommitterName => GetContributerName(_committerLine.Slice(10));
+        public ReadOnlySpan<byte> GetCommitterBytes() => GetContributerName(_committerLine.Slice(10));
 
-        public ReadOnlyMemory<byte> AuthorName => GetContributerName(_authorLine.Slice(7));
+        public string GetCommitterName() => Encoding.UTF8.GetString(GetCommitterBytes());
 
-        private ReadOnlyMemory<byte> GetContributerName(in ReadOnlyMemory<byte> contributerWithTime)
+        public ReadOnlySpan<byte> GetAuthorBytes() => GetContributerName(_authorLine.Slice(7));
+
+        public string GetAuthorName() => Encoding.UTF8.GetString(GetAuthorBytes());
+
+        private ReadOnlySpan<byte> GetContributerName(in ReadOnlyMemory<byte> contributerWithTime)
         {
             var span = contributerWithTime.Span;
             int spaces = 0;
@@ -79,7 +83,7 @@ namespace GitRewrite.GitObjects
                 }
             }
 
-            return contributerWithTime.Slice(0, index);
+            return contributerWithTime.Span.Slice(0, index);
         }
 
         public ObjectHash TreeHash => new ObjectHash(_treeHash.Span.Slice(5));
@@ -123,7 +127,7 @@ namespace GitRewrite.GitObjects
             var message = commit._commitMessage;
 
             var contentSize = tree.Length + 1 + parentLines.Sum(x => x.Length + 1) + author.Length + 1 +
-                              committer.Length + 1 + message.Length + 1;
+                              committer.Length + 1 + message.Length;
 
             var resultBuffer = new byte[contentSize];
 
@@ -144,7 +148,6 @@ namespace GitRewrite.GitObjects
 
             committer.Span.CopyTo(resultBuffer.AsSpan(bytesCopied, committer.Length));
             bytesCopied += committer.Length;
-            resultBuffer[bytesCopied++] = (byte) '\n';
             resultBuffer[bytesCopied++] = (byte) '\n';
 
             message.Span.CopyTo(resultBuffer.AsSpan(bytesCopied, message.Length));
