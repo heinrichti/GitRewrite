@@ -28,19 +28,31 @@ namespace GitRewrite
         {
             var commits = ReadCommitsFromRefs(vcsPath);
             var parentsSeen = new HashSet<ObjectHash>();
+            var commitsProcessed = new HashSet<ObjectHash>();
 
             while (commits.TryPop(out var commit))
-                if (!parentsSeen.Add(commit.Hash) || !commit.HasParents)
-                    yield return commit;
+                if (commitsProcessed.Contains(commit.Hash))
+                    parentsSeen.Remove(commit.Hash);
                 else
                 {
-                    commits.Push(commit);
-                    foreach (var parent in commit.Parents)
+                    if (!parentsSeen.Add(commit.Hash) || !commit.HasParents)
                     {
-                        var parentCommit = GitObjectFactory.ReadCommit(vcsPath, parent);
-                        if (parentCommit == null)
-                            throw new Exception("Commit not found: " + parent);
-                        commits.Push(parentCommit);
+                        commitsProcessed.Add(commit.Hash);
+                        yield return commit;
+                    }
+                    else
+                    {
+                        commits.Push(commit);
+                        foreach (var parent in commit.Parents)
+                        {
+                            if (!commitsProcessed.Contains(parent))
+                            {
+                                var parentCommit = GitObjectFactory.ReadCommit(vcsPath, parent);
+                                if (parentCommit == null)
+                                    throw new Exception("Commit not found: " + parent);
+                                commits.Push(parentCommit);
+                            }
+                        }
                     }
                 }
         }
