@@ -27,7 +27,7 @@ namespace GitRewrite
             for (var i = 0; i < 256; i++)
             {
                 var s = i.ToString("x2");
-                result[i] = s[0] + ((uint) s[1] << 16);
+                result[i] = s[0] + ((uint)s[1] << 16);
             }
 
             return result;
@@ -36,30 +36,69 @@ namespace GitRewrite
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static byte GetHashValue(char c)
         {
-            if (c == '0') return 0;
-            if (c == '1') return 1;
-            if (c == '2') return 2;
-            if (c == '3') return 3;
-            if (c == '4') return 4;
-            if (c == '5') return 5;
-            if (c == '6') return 6;
-            if (c == '7') return 7;
-            if (c == '8') return 8;
-            if (c == '9') return 9;
-            if (c == 'a') return 10;
-            if (c == 'A') return 10;
-            if (c == 'b') return 11;
-            if (c == 'B') return 11;
-            if (c == 'c') return 12;
-            if (c == 'C') return 12;
-            if (c == 'd') return 13;
-            if (c == 'D') return 13;
-            if (c == 'e') return 14;
-            if (c == 'E') return 14;
-            if (c == 'f') return 15;
-            if (c == 'F') return 15;
+            byte result = 0;
 
-            throw new ArgumentException();
+            switch (c)
+            {
+                case '0':
+                    result = 0;
+                    break;
+                case '1':
+                    result = 1;
+                    break;
+                case '2':
+                    result = 2;
+                    break;
+                case '3':
+                    result = 3;
+                    break;
+                case '4':
+                    result = 4;
+                    break;
+                case '5':
+                    result = 5;
+                    break;
+                case '6':
+                    result = 6;
+                    break;
+                case '7':
+                    result = 7;
+                    break;
+                case '8':
+                    result = 8;
+                    break;
+                case '9':
+                    result = 9;
+                    break;
+                case 'a':
+                case 'A':
+                    result = 10;
+                    break;
+                case 'b':
+                case 'B':
+                    result = 11;
+                    break;
+                case 'c':
+                case 'C':
+                    result = 12;
+                    break;
+                case 'd':
+                case 'D':
+                    result = 13;
+                    break;
+                case 'e':
+                case 'E':
+                    result = 14;
+                    break;
+                case 'f':
+                case 'F':
+                    result = 15;
+                    break;
+                default:
+                    throw new ArgumentException();
+            }
+
+            return result;
         }
 
         public static byte[] HashStringToByteArray(in ReadOnlySpan<byte> hashStringAsBytes)
@@ -68,8 +107,8 @@ namespace GitRewrite
             var result = new byte[resultSize];
 
             for (int i = 0; i < resultSize; i++)
-                result[i] = (byte) ((GetHashValue((char) hashStringAsBytes[2 * i]) << 4) |
-                                    GetHashValue((char) hashStringAsBytes[2 * i + 1]));
+                result[i] = (byte)((GetHashValue((char)hashStringAsBytes[2 * i]) << 4) |
+                                    GetHashValue((char)hashStringAsBytes[2 * i + 1]));
 
             return result;
         }
@@ -80,7 +119,7 @@ namespace GitRewrite
             var result = new byte[resultSize];
 
             for (int i = 0; i < resultSize; i++)
-                result[i] = (byte) ((GetHashValue(hash[2 * i]) << 4) | GetHashValue(hash[2 * i + 1]));
+                result[i] = (byte)((GetHashValue(hash[2 * i]) << 4) | GetHashValue(hash[2 * i + 1]));
 
             return result;
         }
@@ -90,14 +129,14 @@ namespace GitRewrite
             var lookup32 = Lookup32;
 
             return string.Create<(byte[] Bytes, uint[] Lookup)>(
-                bytes.Length * 2, 
+                bytes.Length * 2,
                 (bytes, lookup32), (result, state) =>
                 {
                     for (var i = 0; i < state.Bytes.Length; i++)
                     {
                         var val = state.Lookup[state.Bytes[i]];
-                        result[2 * i] = (char) val;
-                        result[2 * i + 1] = (char) (val >> 16);
+                        result[2 * i] = (char)val;
+                        result[2 * i + 1] = (char)(val >> 16);
                     }
                 });
         }

@@ -7,19 +7,25 @@ namespace GitRewrite
     {
         public bool Equals(ReadOnlyMemory<byte> x, ReadOnlyMemory<byte> y)
         {
-            if (x.Length != y.Length)
-                return false;
-
+            bool equal = true;
             var span1 = x.Span;
             var span2 = y.Span;
 
-            for (int i = x.Length - 1; i >= 0; i--)
+
+            if (x.Length == y.Length)
             {
-                if (span1[i] != span2[i])
-                    return false;
+                for (int i = x.Length - 1; i >= 0; i--)
+                {
+                    if (span1[i] != span2[i])
+                        equal = false;
+                }
+            }
+            else
+            {
+                equal = false;
             }
 
-            return true;
+            return equal;
         }
 
         public int GetHashCode(ReadOnlyMemory<byte> obj)
