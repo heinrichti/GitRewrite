@@ -7,6 +7,7 @@ namespace GitRewrite.GitObjects
     public sealed class Tag : GitObjectBase
     {
         private static readonly byte[] TagKey = "tag".Select(x => (byte) x).ToArray();
+        private static readonly byte[] TreeKey = "tree".Select(x => (byte) x).ToArray();
         private readonly Memory<byte> _content;
         private readonly Memory<byte> _message;
         private readonly Memory<byte> _object;
@@ -38,9 +39,9 @@ namespace GitRewrite.GitObjects
                 {
                     _tagger = content.Slice(0, nextNewLine);
                 }
-                else if (content.Span[0] == 10)
+                else
                 {
-                    _message = content.Slice(1);
+                    _message = content;
                     break;
                 }
 
@@ -55,7 +56,8 @@ namespace GitRewrite.GitObjects
         public string Tagger => Encoding.UTF8.GetString(_tagger.Span.Slice(7));
         public string Message => Encoding.UTF8.GetString(_message.Span);
 
-        public bool PointsToTag => _type.Span.StartsWith(TagKey);
+        public bool PointsToTag => _type.Span.Slice(5).StartsWith(TagKey);
+        public bool PointsToTree => _type.Span.Slice(5).StartsWith(TreeKey);
 
         public Tag WithNewObject(string obj)
         {
@@ -83,9 +85,6 @@ namespace GitRewrite.GitObjects
 
             for (var i = 0; i < _tagger.Length; i++)
                 resultBuffer[resultIndex++] = _tagger.Span[i];
-
-            resultBuffer[resultIndex++] = 10;
-            resultBuffer[resultIndex++] = 10;
 
             for (var i = 0; i < _message.Length; i++)
                 resultBuffer[resultIndex++] = _message.Span[i];

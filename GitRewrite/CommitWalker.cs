@@ -60,26 +60,26 @@ namespace GitRewrite
         private static ConcurrentStack<Commit> ReadCommitsFromRefs(string vcsPath)
         {
             var refs = Refs.ReadAll(vcsPath);
-
+            var addedCommits = new ConcurrentDictionary<ObjectHash, bool>();
             var result = new ConcurrentStack<Commit>();
 
-            Parallel.ForEach(refs, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, @ref =>
-             {
-                 var gitObject = @ref is TagRef tag
-                     ? GitObjectFactory.ReadGitObject(vcsPath, new ObjectHash(tag.CommitHash))
-                     : GitObjectFactory.ReadGitObject(vcsPath, new ObjectHash(@ref.Hash));
+            Parallel.ForEach(refs, new ParallelOptions {MaxDegreeOfParallelism = Environment.ProcessorCount}, @ref =>
+            {
+                var gitObject = @ref is TagRef tag
+                    ? GitObjectFactory.ReadGitObject(vcsPath, new ObjectHash(tag.CommitHash))
+                    : GitObjectFactory.ReadGitObject(vcsPath, new ObjectHash(@ref.Hash));
 
-                 while (gitObject is Tag tagObject)
-                 {
-                     gitObject = GitObjectFactory.ReadGitObject(vcsPath, new ObjectHash(tagObject.Object));
-                 }
+                while (gitObject is Tag tagObject)
+                {
+                    gitObject = GitObjectFactory.ReadGitObject(vcsPath, new ObjectHash(tagObject.Object));
+                }
 
-                 if (gitObject.Type == GitObjectType.Commit)
-                     result.Push((Commit)gitObject);
-                 // Tags pointing to trees are ignored
-                 else if (gitObject.Type != GitObjectType.Tree)
-                     throw new Exception();
-             });
+                // Tags pointing to trees are ignored
+                if (gitObject.Type == GitObjectType.Commit && addedCommits.TryAdd(gitObject.Hash, true))
+                {
+                    result.Push((Commit) gitObject);
+                }
+            });
 
             return result;
         }
