@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using GitRewrite.GitObjects;
 
@@ -19,7 +21,7 @@ namespace GitRewrite
 
                 yield return commit;
 
-                foreach (var parent in commit.Parents)
+                foreach (var parent in commit.Parents.Where(parent => !commitsAlreadySeen.Contains(parent)))
                     commits.Push(GitObjectFactory.ReadCommit(vcsPath, parent));
             }
         }
