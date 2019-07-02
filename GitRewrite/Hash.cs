@@ -85,7 +85,21 @@ namespace GitRewrite
             return result;
         }
 
-        public static string ByteArrayToHexViaLookup32(byte[] bytes)
+        public static byte[] ByteArrayToTextBytes(byte[] bytes)
+        {
+            var lookup32 = Lookup32;
+            var result = new byte[bytes.Length * 2];
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                var val = lookup32[bytes[i]];
+                result[2 * i] = (byte) val;
+                result[2 * i + 1] = (byte) (val >> 16);
+            }
+
+            return result;
+        }
+
+        public static string ByteArrayToString(byte[] bytes)
         {
             var lookup32 = Lookup32;
 

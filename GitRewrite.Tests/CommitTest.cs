@@ -51,7 +51,7 @@ namespace GitRewrite.Tests
                 {
                     new ObjectHash(newParent1),
                     new ObjectHash(newParent2)
-                });
+                }.ToList());
 
             var newCommit = new Commit(new ObjectHash("1234567890123456789012345678901234567890"), newCommitBytes);
 
@@ -85,7 +85,7 @@ namespace GitRewrite.Tests
                 {
                     new ObjectHash(newParent1),
                     new ObjectHash(newParent2)
-                });
+                }.ToList());
 
             var newCommit = new Commit(new ObjectHash("1234567890123456789012345678901234567890"), newCommitBytes);
 

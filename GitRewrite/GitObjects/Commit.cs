@@ -107,50 +107,40 @@ namespace GitRewrite.GitObjects
             => _content;
 
         public static byte[] GetSerializedCommitWithChangedTreeAndParents(Commit commit, ObjectHash treeHash,
-            IEnumerable<ObjectHash> parents)
+            List<ObjectHash> parents)
         {
-            var tree = new byte[45];
-            Array.Copy(ObjectPrefixes.TreePrefix, tree, 5);
-            var hashString = treeHash.ToString();
-            for (int i = 0; i < hashString.Length; i++)
-            {
-                tree[i + 5] = (byte)hashString[i];
-            }
+            const int firstLineLength = 46;
+            const int treePrefixLength = 5;
+            const int parentLineLength = 7 + 40 + 1;
 
-            var parentLines = new List<byte[]>();
-            foreach (var commitParent in parents) 
-                parentLines.Add(Encoding.UTF8.GetBytes("parent " + commitParent));
-
-            var author = commit._authorLine;
-            var committer = commit._committerLine;
-
-            var message = commit._commitMessage;
-
-            var contentSize = tree.Length + 1 + parentLines.Sum(x => x.Length + 1) + author.Length + 1 +
-                              committer.Length + 1 + message.Length;
+            var contentSize = firstLineLength + parents.Count * parentLineLength + commit._authorLine.Length + 1 +
+                              commit._committerLine.Length + 1 + commit._commitMessage.Length;
 
             var resultBuffer = new byte[contentSize];
 
-            Array.Copy(tree, 0, resultBuffer, 0, tree.Length);
-            var bytesCopied = tree.Length;
-            resultBuffer[bytesCopied++] = (byte) '\n';
+            Array.Copy(ObjectPrefixes.TreePrefix, resultBuffer, treePrefixLength);
+            Array.Copy(treeHash.ToStringBytes(), 0, resultBuffer, treePrefixLength, 40);
+            resultBuffer[45] = (byte) '\n';
 
-            foreach (var parentLine in parentLines)
+            var bytesCopied = firstLineLength;
+
+            foreach (var parent in parents)
             {
-                Array.Copy(parentLine, 0, resultBuffer, bytesCopied, parentLine.Length);
-                bytesCopied += parentLine.Length;
+                Array.Copy(ObjectPrefixes.ParentPrefix, 0, resultBuffer, bytesCopied, 7);
+                Array.Copy(parent.ToStringBytes(), 0, resultBuffer, bytesCopied + 7, 40);
+                bytesCopied += 47;
                 resultBuffer[bytesCopied++] = (byte) '\n';
             }
 
-            author.Span.CopyTo(resultBuffer.AsSpan(bytesCopied, author.Length));
-            bytesCopied += author.Length;
+            commit._authorLine.Span.CopyTo(resultBuffer.AsSpan(bytesCopied, commit._authorLine.Length));
+            bytesCopied += commit._authorLine.Length;
             resultBuffer[bytesCopied++] = (byte) '\n';
 
-            committer.Span.CopyTo(resultBuffer.AsSpan(bytesCopied, committer.Length));
-            bytesCopied += committer.Length;
+            commit._committerLine.Span.CopyTo(resultBuffer.AsSpan(bytesCopied, commit._committerLine.Length));
+            bytesCopied += commit._committerLine.Length;
             resultBuffer[bytesCopied++] = (byte) '\n';
 
-            message.Span.CopyTo(resultBuffer.AsSpan(bytesCopied, message.Length));
+            commit._commitMessage.Span.CopyTo(resultBuffer.AsSpan(bytesCopied, commit._commitMessage.Length));
 
             return resultBuffer;
         }
