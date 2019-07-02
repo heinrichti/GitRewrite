@@ -1,6 +1,6 @@
 ﻿namespace GitRewrite.IO
 {
-    public class PackObject
+    public readonly struct PackObject
     {
         public PackObject(int type, long offset, int headerLength, int dataSize)
         {
@@ -10,9 +10,9 @@
             DataSize = dataSize;
         }
 
-        public int Type { get; }
-        public long Offset { get; }
-        public int HeaderLength { get; }
-        public int DataSize { get; }
+        public readonly int Type;
+        public readonly long Offset;
+        public readonly int HeaderLength;
+        public readonly int DataSize;
     }
 }

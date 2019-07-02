@@ -8,6 +8,8 @@ namespace GitRewrite.Delete
     {
         private readonly List<IFolderDeletionStrategy> _strategies;
 
+        public readonly List<byte[]> RelevantPaths = new List<byte[]>();
+
         public FolderDeletionStrategies(IEnumerable<string> patterns)
         {
             _strategies = new List<IFolderDeletionStrategy>();
@@ -27,8 +29,6 @@ namespace GitRewrite.Delete
                     _strategies.Add(new FolderSimpleDeleteStrategy(objectPattern));
             }
         }
-
-        public List<byte[]> RelevantPaths { get; } = new List<byte[]>();
 
         public bool DeleteObject(ReadOnlySpan<byte> currentPath)
         {
