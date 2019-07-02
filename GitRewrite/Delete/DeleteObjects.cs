@@ -52,13 +52,15 @@ namespace GitRewrite.Delete
                     (NewTreeHash:
                     RemoveObjectFromTree(vcsPath, commit.TreeHash, filesToDelete, foldersToDelete,
                         rewrittenTrees, new byte[0], relevantPaths), Commit: commit))
-                .Where(result => result.NewTreeHash != result.Commit.TreeHash)
             )
             {
-                if (removalResult.NewTreeHash != removalResult.Commit.TreeHash)
+                var rewrittenParentHashes = Hash.GetRewrittenParentHashes(removalResult.Commit.Parents, rewrittenCommits).ToList();
+
+                if (removalResult.NewTreeHash != removalResult.Commit.TreeHash || !rewrittenParentHashes.SequenceEqual(removalResult.Commit.Parents))
                 {
-                    var newCommit = Commit.GetSerializedCommitWithChangedTreeAndParents(removalResult.Commit, removalResult.NewTreeHash,
-                        Hash.GetRewrittenParentHashes(removalResult.Commit.Parents, rewrittenCommits));
+                    var newCommit = Commit.GetSerializedCommitWithChangedTreeAndParents(removalResult.Commit,
+                        removalResult.NewTreeHash,
+                        rewrittenParentHashes);
 
                     var newCommitBytes = GitObjectFactory.GetBytesWithHeader(GitObjectType.Commit, newCommit);
                     var newCommitHash = new ObjectHash(Hash.Create(newCommitBytes));
