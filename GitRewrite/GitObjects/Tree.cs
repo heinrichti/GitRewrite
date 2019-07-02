@@ -31,7 +31,7 @@ namespace GitRewrite.GitObjects
             Lines = lines;
         }
 
-        public IReadOnlyList<TreeLine> Lines { get; }
+        public readonly IReadOnlyList<TreeLine> Lines;
 
         public static byte[] GetSerializedObject(IReadOnlyList<TreeLine> treeLines)
         {
@@ -129,11 +129,11 @@ namespace GitRewrite.GitObjects
 
             public string TextString => Encoding.UTF8.GetString(TextBytes.Span);
 
-            public ReadOnlyMemory<byte> TextBytes { get; }
+            public readonly ReadOnlyMemory<byte> TextBytes;
 
-            public ReadOnlyMemory<byte> FileNameBytes { get; }
+            public readonly ReadOnlyMemory<byte> FileNameBytes;
 
-            public ObjectHash Hash { get; }
+            public readonly ObjectHash Hash;
 
             public bool IsDirectory() => TextBytes.Span[0] != '1';
 

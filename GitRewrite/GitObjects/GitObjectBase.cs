@@ -14,9 +14,9 @@ namespace GitRewrite.GitObjects
             _hashCode = hash.GetHashCode();
         }
 
-        public ObjectHash Hash { get; }
+        public readonly ObjectHash Hash;
 
-        public GitObjectType Type { get; }
+        public readonly GitObjectType Type;
 
         public bool Equals(GitObjectBase other)
         {

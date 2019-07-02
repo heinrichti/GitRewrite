@@ -2,7 +2,7 @@
 
 namespace GitRewrite.GitObjects
 {
-    public struct ObjectHash : IEquatable<ObjectHash>
+    public readonly struct ObjectHash : IEquatable<ObjectHash>
     {
         private readonly int _hashCode;
         private const int ByteHashLength = 20;
@@ -34,7 +34,7 @@ namespace GitRewrite.GitObjects
         {
         }
 
-        public byte[] Bytes { get; }
+        public readonly byte[] Bytes;
 
         public override string ToString() => Hash.ByteArrayToString(Bytes);
 
