@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace GitRewrite.Tests
 {
     [TestClass]
-    public class CommitTest
+    public class CommitTests
     {
         private const string CommitWithPgpSig =
             "tree 413f6b2e45859c6a962d2f2e8437598c63d92e3a\n" +

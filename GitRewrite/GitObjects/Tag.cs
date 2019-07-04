@@ -86,6 +86,8 @@ namespace GitRewrite.GitObjects
             for (var i = 0; i < _tagger.Length; i++)
                 resultBuffer[resultIndex++] = _tagger.Span[i];
 
+            resultBuffer[resultIndex++] = 10;
+
             for (var i = 0; i < _message.Length; i++)
                 resultBuffer[resultIndex++] = _message.Span[i];
 
