@@ -16,6 +16,7 @@ namespace GitRewrite
             {
                 if (span1[i] != span2[i])
                     equal = false;
+                i--;
             }
 
             return equal;
