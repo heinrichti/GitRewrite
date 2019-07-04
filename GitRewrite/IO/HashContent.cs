@@ -66,7 +66,7 @@ namespace GitRewrite.IO
         }
 
         public static void UnpackTo(MemoryMappedViewAccessor fileView, PackObject packObject,
-            in Span<byte> buffer, int additionalOffset = 0)
+            byte[] buffer, int additionalOffset = 0)
         {
             var realOffset = packObject.Offset + packObject.HeaderLength + additionalOffset + 2;
 
@@ -76,7 +76,12 @@ namespace GitRewrite.IO
             using (var unmanagedMemoryStream = new UnmanagedMemoryStream(safeHandle, realOffset, size))
             using (var stream = new DeflateStream(unmanagedMemoryStream, CompressionMode.Decompress, true))
             {
-                stream.Read(buffer);
+                var bytesRead = 0;
+                do
+                {
+                    bytesRead += stream.Read(buffer, bytesRead, packObject.DataSize - bytesRead);    
+                } while (bytesRead < packObject.DataSize);
+                
             }
         }
 
@@ -91,7 +96,12 @@ namespace GitRewrite.IO
             using (var unmanagedMemoryStream = new UnmanagedMemoryStream(safeHandle, realOffset, size))
             using (var stream = new DeflateStream(unmanagedMemoryStream, CompressionMode.Decompress, true))
             {
-                stream.Read(buffer, 0, packObject.DataSize);
+                var bytesRead = 0;
+                do
+                {
+                    bytesRead += stream.Read(buffer, bytesRead, packObject.DataSize - bytesRead);
+                } while (bytesRead < packObject.DataSize);
+                
             }
 
             return buffer;

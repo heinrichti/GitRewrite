@@ -158,7 +158,7 @@ namespace GitRewrite.IO
                 bytesToFree.Push(buffer);
 
                 var deltaOffset = ReadDeltaOffset(memory, packObject);
-                HashContent.UnpackTo(memory, packObject, deltaData.Span, deltaOffset.BytesRead);
+                HashContent.UnpackTo(memory, packObject, buffer, deltaOffset.BytesRead);
                 packObject = ReadPackObject(memory, packObject.Offset - deltaOffset.NegativeOffset);
             }
             
@@ -167,7 +167,7 @@ namespace GitRewrite.IO
             var restoredObjectBytesFromPool = DiffBytesPool.Rent(packObject.DataSize);
             Span<byte> restoredBytesSpan = restoredObjectBytesFromPool.AsSpan(0, packObject.DataSize);
 
-            HashContent.UnpackTo(memory, packObject, restoredBytesSpan);
+            HashContent.UnpackTo(memory, packObject, restoredObjectBytesFromPool);
 
             Span<byte> targetBuffer = null;
             while (deltaStack.TryPop(out var deltaData))
