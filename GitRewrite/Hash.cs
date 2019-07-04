@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -34,32 +33,12 @@ namespace GitRewrite
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static byte GetHashValue(char c)
+        private static byte GetHashValue(byte c)
         {
-            if (c == '0') return 0;
-            if (c == '1') return 1;
-            if (c == '2') return 2;
-            if (c == '3') return 3;
-            if (c == '4') return 4;
-            if (c == '5') return 5;
-            if (c == '6') return 6;
-            if (c == '7') return 7;
-            if (c == '8') return 8;
-            if (c == '9') return 9;
-            if (c == 'a') return 10;
-            if (c == 'A') return 10;
-            if (c == 'b') return 11;
-            if (c == 'B') return 11;
-            if (c == 'c') return 12;
-            if (c == 'C') return 12;
-            if (c == 'd') return 13;
-            if (c == 'D') return 13;
-            if (c == 'e') return 14;
-            if (c == 'E') return 14;
-            if (c == 'f') return 15;
-            if (c == 'F') return 15;
+            if (c <= 57)
+                return (byte) (c - 48);
 
-            throw new ArgumentException();
+            return (byte) (c - 87);
         }
 
         public static byte[] HashStringToByteArray(in ReadOnlySpan<byte> hashStringAsBytes)
@@ -68,8 +47,8 @@ namespace GitRewrite
             var result = new byte[resultSize];
 
             for (int i = 0; i < resultSize; i++)
-                result[i] = (byte) ((GetHashValue((char) hashStringAsBytes[2 * i]) << 4) |
-                                    GetHashValue((char) hashStringAsBytes[2 * i + 1]));
+                result[i] = (byte) ((GetHashValue(hashStringAsBytes[2 * i]) << 4) |
+                                    GetHashValue(hashStringAsBytes[2 * i + 1]));
 
             return result;
         }
@@ -80,7 +59,7 @@ namespace GitRewrite
             var result = new byte[resultSize];
 
             for (int i = 0; i < resultSize; i++)
-                result[i] = (byte) ((GetHashValue(hash[2 * i]) << 4) | GetHashValue(hash[2 * i + 1]));
+                result[i] = (byte) ((GetHashValue((byte)hash[2 * i]) << 4) | GetHashValue((byte)hash[2 * i + 1]));
 
             return result;
         }
