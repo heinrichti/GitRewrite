@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Text;
 using GitRewrite.GitObjects;
 
-namespace GitRewrite.Delete
+namespace GitRewrite.CleanupTask.Delete
 {
     class FolderExactDeletionStrategy : IFolderDeletionStrategy
     {
