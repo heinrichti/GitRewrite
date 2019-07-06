@@ -68,7 +68,7 @@ GitRewrite C:/VCS/MyRepo --rewrite-contributers [contributers.txt]
 ```
 Rewrites authors and committers.
 The contributers.txt is the mapping from old contributer name to new contributer name:
-  Old User <old@gmail.com> = New User <new@gmail.com>
+  Old User \<old@gmail.com> = New User \<new@gmail.com>
 
 ### General 
 The different actions can only be performed one at a time, for example it is not possible to mix -e and -d.
