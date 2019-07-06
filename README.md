@@ -9,6 +9,8 @@ removing empty commits or rewriting committer and author information.
 
 Docker images are available here: https://hub.docker.com/r/lightraven/git-rewrite
 
+[![Build status](https://ci.appveyor.com/api/projects/status/gqdtitbjcd3mquta?svg=true)](https://ci.appveyor.com/project/TimHeinrich/gitrewrite)
+
 ## Important notice
 This tool will rewrite the git history and therefore change many, if not all, commit hashes.
 It will also unsign signed commits. 
