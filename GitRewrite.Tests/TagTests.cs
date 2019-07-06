@@ -16,6 +16,23 @@ namespace GitRewrite.Tests
                                               "tagger Test User <test.user@github.com> 1562258217 +0200\n\n" +
                                               "My Test Tag\n";
 
+        private const string TagWithoutTagger =
+            "object 1b2bf77246f78a91ffa90456e6d1c393db1d5eb0\ntype commit\ntag 1.1.95.0\n\nTagged Release xy";
+
+        [TestMethod]
+        public void TagWithoutTaggerTest()
+        {
+            var bytes = Encoding.UTF8.GetBytes(TagWithoutTagger);
+            var objectHash = new ObjectHash("1234567890123456789012345678901234567890");
+            var tag = new Tag(objectHash, bytes);
+
+            Assert.AreEqual("1b2bf77246f78a91ffa90456e6d1c393db1d5eb0", tag.Object);
+            Assert.AreEqual("commit", tag.TypeName);
+            Assert.AreEqual("1.1.95.0", tag.TagName);
+            Assert.AreEqual("\nTagged Release xy", tag.Message);
+            Assert.AreEqual(string.Empty, tag.Tagger);
+        }
+
         [TestMethod]
         public void TagWithCommentTest()
         {

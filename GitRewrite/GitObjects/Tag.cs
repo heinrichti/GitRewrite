@@ -53,7 +53,7 @@ namespace GitRewrite.GitObjects
         public string Object => Encoding.UTF8.GetString(_object.Span.Slice(7));
         public string TypeName => Encoding.UTF8.GetString(_type.Span.Slice(5));
         public string TagName => Encoding.UTF8.GetString(_tag.Span.Slice(4));
-        public string Tagger => Encoding.UTF8.GetString(_tagger.Span.Slice(7));
+        public string Tagger => _tagger.IsEmpty ? "" : Encoding.UTF8.GetString(_tagger.Span.Slice(7));
         public string Message => Encoding.UTF8.GetString(_message.Span);
 
         public bool PointsToTag => _type.Span.Slice(5).StartsWith(TagKey);
