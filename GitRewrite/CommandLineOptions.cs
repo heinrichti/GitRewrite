@@ -26,6 +26,8 @@ namespace GitRewrite
 
         public string ContributerMappingFile { get; private set; }
 
+        public bool ProtectRefs { get; private set; }
+
         internal static bool TryParse(string[] args, out CommandLineOptions options)
         {
             options = new CommandLineOptions();
@@ -77,10 +79,18 @@ namespace GitRewrite
                         case "--rewrite-contributers":
                             rewriteContributersFileExpected = true;
                             break;
+                        case "--protect-refs":
+                            options.ProtectRefs = true;
+                            break;
                         default:
                             if (arg.StartsWith("-"))
                                 throw new ArgumentException("Could not parse arguments.");
+
+                            if (!string.IsNullOrWhiteSpace(options.RepositoryPath))
+                                throw new ArgumentException("Repository path is multiple times.");
+
                             options.RepositoryPath = arg;
+
                             break;
                     }
                 }
@@ -131,6 +141,7 @@ namespace GitRewrite
                 "  If filePattern is *filename, then all files ending with filename will be deleted from all directories.");
             Console.WriteLine(
                 "  If filePattern is /path/to/filename, then the file will be delete only in the exact directory.");
+                Console.WriteLine("  Use --protect-refs to not update commits refs point to.");
             Console.WriteLine();
 
             Console.WriteLine("-D [directoryPattern...], --delete-directories [directoryPattern...]");

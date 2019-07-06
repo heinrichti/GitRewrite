@@ -19,6 +19,8 @@ Only use it if you fully understand the implications of this!
 ```cmd
 GitRewrite C:/VCS/MyRepo -d file1,file2,file3
 GitRewrite C:/VCS/MyRepo --delete-files file1,file2,file3
+GitRewrite C:/VCS/MyRepo -d file1,file2,file3 --protect-refs
+GitRewrite C:/VCS/MyRepo --delete-files file1,file2,file3 --protect-refs
 ```
 Deleting should be pretty fast, especially when specifying the whole path to the file. 
 Simple wildcards for the beginning and the end of the filename are supported, like &ast;.zip.
@@ -26,10 +28,15 @@ It also lets you specify the complete path to the file instead of only a file na
 For this the path has to be prefixed by a forward slash and the path seperator also is a forward slash: /path/to/file.txt
 Specifying only files with complete path will result in much better performance as not all subtrees have to be checked.
 
+If the goal is to delete files but keep them in all refs (branches and tags) use the --protect-refs flag. 
+With this flag GitRewrite will not touch files in a commit a ref points to. 
+
 ### Deleting directories
 ```
 GitRewrite -D folder1,folder2,folder3
 GitRewrite --delete-directories folder1,folder2,folder3
+GitRewrite -D folder1,folder2,folder3 --protect-refs
+GitRewrite --delete-directories folder1,folder2,folder3 --protect-refs
 ```
 Patterns and performance characteristics are the same as for deleting files. Can be used in conjunction with -d.
 

@@ -18,21 +18,30 @@ namespace GitRewrite.CleanupTask.Delete
         private readonly ConcurrentDictionary<ObjectHash, ObjectHash> _rewrittenTrees =
             new ConcurrentDictionary<ObjectHash, ObjectHash>();
 
+        private HashSet<ObjectHash> _commitsToSkip;
+
         public DeletionTask(string repositoryPath, IEnumerable<string> filesToDelete,
-            IEnumerable<string> foldersToDelete)
+            IEnumerable<string> foldersToDelete, bool protectRefs)
             : base(repositoryPath)
         {
             _fileDeleteStrategies = new FileDeletionStrategies(filesToDelete);
             _folderDeleteStrategies = new FolderDeletionStrategies(foldersToDelete);
+
+            _commitsToSkip = new HashSet<ObjectHash>(protectRefs
+                ? Refs.ReadAll(repositoryPath)
+                    .Select(r => new ObjectHash(r is TagRef tagRef ? tagRef.CommitHash : r.Hash))
+                : new HashSet<ObjectHash>());
 
             _relevantPathes =
                 _fileDeleteStrategies.RelevantPaths.Union(_folderDeleteStrategies.RelevantPaths).ToList();
         }
 
         protected override (Commit Commit, ObjectHash NewTreeHash) ParallelStep(Commit commit)
-            => (commit, RemoveObjectFromTree(RepositoryPath, commit.TreeHash, _fileDeleteStrategies,
-                _folderDeleteStrategies,
-                _rewrittenTrees, new byte[0], _relevantPathes));
+            => (commit, _commitsToSkip.Contains(commit.Hash)
+                ? commit.TreeHash
+                : RemoveObjectFromTree(RepositoryPath, commit.TreeHash, _fileDeleteStrategies,
+                    _folderDeleteStrategies,
+                    _rewrittenTrees, new byte[0], _relevantPathes));
 
         protected override void SynchronousStep((Commit Commit, ObjectHash NewTreeHash) removalResult)
         {
