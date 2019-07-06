@@ -32,7 +32,7 @@ namespace GitRewrite
             }
             else if (options.FilesToDelete.Any() || options.FoldersToDelete.Any())
             {
-                using (var task = new DeletionTask(options.RepositoryPath, options.FilesToDelete, options.FoldersToDelete))
+                using (var task = new DeletionTask(options.RepositoryPath, options.FilesToDelete, options.FoldersToDelete, options.ProtectRefs))
                     task.Run();
             }
             else if (options.RemoveEmptyCommits)
