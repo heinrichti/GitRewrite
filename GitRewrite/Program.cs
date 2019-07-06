@@ -40,6 +40,11 @@ namespace GitRewrite
                 using (var removeEmptyCommitsTask = new RemoveEmptyCommitsTask(options.RepositoryPath))
                     removeEmptyCommitsTask.Run();
             }
+            else if (!string.IsNullOrWhiteSpace(options.ContributerMappingFile))
+            {
+                using (var rewriteContributerTask = new RewriteContributerTask(options.RepositoryPath, options.ContributerMappingFile))
+                    rewriteContributerTask.Run();
+            }
             else if (options.ListContributerNames)
             {
                 foreach (var contributer in CommitWalker.CommitsRandomOrder(options.RepositoryPath)
