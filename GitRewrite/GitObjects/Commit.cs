@@ -145,6 +145,55 @@ namespace GitRewrite.GitObjects
             return resultBuffer;
         }
 
+        public byte[] WithChangedContributer(Dictionary<string, string> contributerMapping, IEnumerable<ObjectHash> parents)
+        {
+            const int firstLineLength = 46;
+            const int parentLineLength = 7 + 40 + 1;
+
+            var author = GetAuthorName();
+            var committer = GetCommitterName();
+            if (!contributerMapping.TryGetValue(author, out var newAuthor))
+                newAuthor = author;
+
+            if (!contributerMapping.TryGetValue(this.GetCommitterName(), out var newCommitter))
+                newCommitter = committer;
+
+            var authorLine = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(this._authorLine.Span).Replace(author, newAuthor));
+            var committerLine = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(this._committerLine.Span).Replace(committer, newCommitter));
+
+            var contentSize = firstLineLength + _parents.Count * parentLineLength + authorLine.Length + 1 +
+                              committerLine.Length + 1 + _commitMessage.Length;
+
+            var resultBuffer = new byte[contentSize];
+
+            _treeHash.Span.CopyTo(resultBuffer.AsSpan(0, this._treeHash.Length));
+            resultBuffer[45] = (byte) '\n';
+
+            var bytesCopied = firstLineLength;
+
+            foreach (var parent in parents)
+            {
+                Array.Copy(ObjectPrefixes.ParentPrefix, 0, resultBuffer, bytesCopied, 7);
+                Array.Copy(parent.ToStringBytes(), 0, resultBuffer, bytesCopied + 7, 40);
+                bytesCopied += 47;
+                resultBuffer[bytesCopied++] = (byte) '\n';
+            }
+
+            Array.Copy(authorLine, 0, resultBuffer, bytesCopied, authorLine.Length);
+            bytesCopied += authorLine.Length;
+            resultBuffer[bytesCopied++] = (byte) '\n';
+
+            Array.Copy(committerLine, 0, resultBuffer, bytesCopied, committerLine.Length);
+            //commit._committerLine.Span.CopyTo(resultBuffer.AsSpan(bytesCopied, commit._committerLine.Length));
+            bytesCopied += committerLine.Length;
+            resultBuffer[bytesCopied++] = (byte) '\n';
+
+            _commitMessage.Span.CopyTo(resultBuffer.AsSpan(bytesCopied, _commitMessage.Length));
+
+            return resultBuffer;
+        }
+
+
         public override bool Equals(object obj) => ReferenceEquals(this, obj) || obj is Commit other && Equals(other);
 
         public override int GetHashCode() => base.GetHashCode();

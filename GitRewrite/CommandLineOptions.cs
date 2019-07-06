@@ -24,11 +24,14 @@ namespace GitRewrite
 
         public bool RemoveEmptyCommits { get; private set; }
 
+        public string ContributerMappingFile { get; private set; }
+
         internal static bool TryParse(string[] args, out CommandLineOptions options)
         {
             options = new CommandLineOptions();
             var deleteFilesStarted = false;
             var deleteFoldersStarted = false;
+            var rewriteContributersFileExpected = false;
 
             foreach (var arg in args)
                 if (deleteFilesStarted)
@@ -40,6 +43,11 @@ namespace GitRewrite
                 {
                     options.FoldersToDelete.AddRange(GetFiles(arg));
                     deleteFoldersStarted = false;
+                }
+                else if (rewriteContributersFileExpected)
+                {
+                    options.ContributerMappingFile = arg;
+                    rewriteContributersFileExpected = false;
                 }
                 else
                 {
@@ -66,6 +74,9 @@ namespace GitRewrite
                         case "--contributer-names":
                             options.ListContributerNames = true;
                             break;
+                        case "--rewrite-contributers":
+                            rewriteContributersFileExpected = true;
+                            break;
                         default:
                             if (arg.StartsWith("-"))
                                 throw new ArgumentException("Could not parse arguments.");
@@ -79,6 +90,7 @@ namespace GitRewrite
             optionsSet += options.FilesToDelete.Any() || options.FoldersToDelete.Any() ? 1 : 0;
             optionsSet += options.RemoveEmptyCommits ? 1 : 0;
             optionsSet += options.ListContributerNames ? 1 : 0;
+            optionsSet += !string.IsNullOrWhiteSpace(options.ContributerMappingFile) ? 1 : 0;
 
             if (optionsSet > 1)
             {
@@ -127,13 +139,21 @@ namespace GitRewrite
             Console.WriteLine("  Can be combined with deleting files.");
             Console.WriteLine();
 
-            Console.WriteLine("--fix-trees");
-            Console.WriteLine(
-                "  Checks for trees with duplicate entries. Rewrites the tree taking only the first entry.");
+            
+            Console.WriteLine("--rewrite-contributers [contributers.txt]");
+            Console.WriteLine("  Rewrite author and committer information.");
+            Console.WriteLine("  contributers.txt is the mapping file for the names that should be replaced. Each line represents one contributer to replace.");
+            Console.WriteLine("  Format is ");
+            Console.WriteLine("      Test User <test@user.com> = New Test User <newtest@user.comm>");
             Console.WriteLine();
 
             Console.WriteLine("--contributer-names");
             Console.WriteLine("  Writes all authors and committers to stdout");
+            Console.WriteLine();
+
+            Console.WriteLine("--fix-trees");
+            Console.WriteLine(
+                "  Checks for trees with duplicate entries. Rewrites the tree taking only the first entry.");
             Console.WriteLine();
         }
 
