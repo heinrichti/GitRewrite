@@ -55,15 +55,26 @@ namespace GitRewrite.CleanupTask
 
             writeStep.Start(new ThreadParams(RepositoryPath, _objectsToWrite));
 
+            Console.WriteLine("Reading commits...");
+
+            long commitNumber = 1;
             foreach (var parallelActionResult in CommitWalker.CommitsInOrder(RepositoryPath)
                 .AsParallel()
                 .AsOrdered()
                 .Select(ParallelStep))
+            {
+                Console.Write("\rProcessing commit " + commitNumber++);
                 SynchronousStep(parallelActionResult);
+            }
 
             _objectsToWrite.CompleteAdding();
+
+            Console.WriteLine();
+            Console.WriteLine("Writing objects...");
+
             writeStep.Join();
 
+            Console.WriteLine("Updating refs...");
             if (_rewrittenCommits.Any())
                 Refs.Update(RepositoryPath, _rewrittenCommits);
         }
