@@ -2,7 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using GitRewrite.Delete;
+using GitRewrite.CleanupTask;
+using GitRewrite.CleanupTask.Delete;
 using GitRewrite.GitObjects;
 using GitRewrite.IO;
 using Commit = GitRewrite.GitObjects.Commit;
@@ -10,7 +11,7 @@ using Tree = GitRewrite.GitObjects.Tree;
 
 namespace GitRewrite
 {
-    public class Program
+    public static class Program
     {
         static void Main(string[] args)
         {
@@ -31,17 +32,19 @@ namespace GitRewrite
             }
             else if (options.FilesToDelete.Any() || options.FoldersToDelete.Any())
             {
-                DeleteObjects.Run(options.RepositoryPath, options.FilesToDelete, options.FoldersToDelete);
+                using (var task = new DeletionTask(options.RepositoryPath, options.FilesToDelete, options.FoldersToDelete))
+                    task.Run();
             }
             else if (options.RemoveEmptyCommits)
             {
-                var rewrittenCommits = RemoveEmptyCommits(options.RepositoryPath);
-                if (rewrittenCommits.Any())
-                    Refs.Update(options.RepositoryPath, rewrittenCommits);
+                using (var removeEmptyCommitsTask = new RemoveEmptyCommitsTask(options.RepositoryPath))
+                    removeEmptyCommitsTask.Run();
             }
             else if (options.ListContributerNames)
             {
-                foreach (var contributer in GetContributers(options.RepositoryPath)
+                foreach (var contributer in CommitWalker.CommitsRandomOrder(options.RepositoryPath)
+                    .SelectMany(commit => new[] {commit.GetAuthorName(), commit.GetCommitterName()})
+                    .Distinct()
                     .AsParallel()
                     .OrderBy(x => x))
                     Console.WriteLine(contributer);
@@ -132,7 +135,7 @@ namespace GitRewrite
                     yield return oldParentHash;
             }
         }
-        
+
         static IEnumerable<ObjectHash> FindCommitsWithDuplicateTreeEntries(string vcsPath)
         {
             foreach (var commit in CommitWalker
@@ -144,58 +147,6 @@ namespace GitRewrite
                 if (commit.Defective)
                     yield return commit.Hash;
             }
-        }
-
-        private static IEnumerable<string> GetContributers(string vcsPath)
-            => CommitWalker.CommitsRandomOrder(vcsPath).SelectMany(commit => new[] {commit.GetAuthorName(), commit.GetCommitterName()})
-                .Distinct();
-
-        private static Dictionary<ObjectHash, ObjectHash> RemoveEmptyCommits(string vcsPath)
-        {
-            var rewrittenCommitHashes = new Dictionary<ObjectHash, ObjectHash>();
-            var commitsWithTreeHashes = new Dictionary<ObjectHash, ObjectHash>();
-
-            foreach (var commit in CommitWalker.CommitsInOrder(vcsPath))
-            {
-                if (rewrittenCommitHashes.ContainsKey(commit.Hash))
-                    continue;
-
-                if (commit.Parents.Count == 1)
-                {
-                    var parentHash = Hash.GetRewrittenParentHash(commit, rewrittenCommitHashes);
-                    var parentTreeHash = commitsWithTreeHashes[parentHash];
-                    if (parentTreeHash == commit.TreeHash)
-                    {
-                        // This commit will be removed
-                        rewrittenCommitHashes.Add(commit.Hash, parentHash);
-                        continue;
-                    }
-                }
-
-                // rewrite this commit
-                var correctParents = Hash.GetRewrittenParentHashes(commit.Parents, rewrittenCommitHashes).ToList();
-                byte[] newCommitBytes;
-                if (correctParents.SequenceEqual(commit.Parents))
-                    newCommitBytes = commit.SerializeToBytes();
-                else
-                    newCommitBytes = Commit.GetSerializedCommitWithChangedTreeAndParents(commit, commit.TreeHash,
-                        correctParents);
-
-                var resultBytes = GitObjectFactory.GetBytesWithHeader(GitObjectType.Commit, newCommitBytes);
-
-                var newCommitHash = new ObjectHash(Hash.Create(resultBytes));
-                var newCommit = new Commit(newCommitHash, newCommitBytes);
-
-                commitsWithTreeHashes.TryAdd(newCommitHash, newCommit.TreeHash);
-
-                if (newCommitHash != commit.Hash && !rewrittenCommitHashes.ContainsKey(commit.Hash))
-                {
-                    HashContent.WriteFile(vcsPath, resultBytes, newCommitHash.ToString());
-                    rewrittenCommitHashes.Add(commit.Hash, newCommitHash);
-                }
-            }
-
-            return rewrittenCommitHashes;
         }
 
         static Dictionary<ObjectHash, ObjectHash> FixDefectiveCommits(string vcsPath, List<ObjectHash> defectiveCommits)

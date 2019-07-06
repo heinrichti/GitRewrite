@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace GitRewrite.Delete
+namespace GitRewrite.CleanupTask.Delete
 {
     public class FileDeletionStrategies
     {

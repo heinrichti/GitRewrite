@@ -7,7 +7,7 @@ using GitRewrite.GitObjects;
 
 namespace GitRewrite
 {
-    public class Hash
+    public static class Hash
     {
         private static readonly uint[] Lookup32 = CreateLookup32();
 
@@ -93,31 +93,6 @@ namespace GitRewrite
                         result[2 * i + 1] = (char) (val >> 16);
                     }
                 });
-        }
-
-        public static IEnumerable<ObjectHash> GetRewrittenParentHashes(IEnumerable<ObjectHash> hashes,
-            Dictionary<ObjectHash, ObjectHash> rewrittenCommitHashes)
-        {
-            foreach (var parentHash in hashes)
-            {
-                var rewrittenParentHash = parentHash;
-
-                while (rewrittenCommitHashes.TryGetValue(rewrittenParentHash, out var parentCommitHash))
-                    rewrittenParentHash = parentCommitHash;
-
-                yield return rewrittenParentHash;
-            }
-        }
-
-        public static ObjectHash GetRewrittenParentHash(Commit commit,
-            Dictionary<ObjectHash, ObjectHash> rewrittenCommitHashes)
-        {
-            var parentHash = commit.Parents.Single();
-
-            while (rewrittenCommitHashes.TryGetValue(parentHash, out var parentCommitHash))
-                parentHash = parentCommitHash;
-
-            return parentHash;
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace GitRewrite.Delete
+namespace GitRewrite.CleanupTask.Delete
 {
     public interface IFileDeletionStrategy
     {
