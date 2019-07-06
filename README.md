@@ -62,7 +62,7 @@ Lists all authors and committers.
 GitRewrite C:/VCS/MyRepo --contributer-names
 ```
 
-## Rewrite all contributer names
+### Rewrite all contributer names
 ```
 GitRewrite C:/VCS/MyRepo --rewrite-contributers [contributers.txt]
 ```
