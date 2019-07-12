@@ -94,3 +94,6 @@ git clone https://github.com/TimHeinrich/GitRewrite.git
 cd GitRewrite
 dotnet publish --self-contained -r win-x64 -c Release 
 ```
+
+## Icon attribution
+disconnect by Dmitry Baranovskiy from the Noun Project
