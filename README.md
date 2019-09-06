@@ -78,7 +78,7 @@ The different actions can only be performed one at a time, for example it is not
 ## Cleanup
 After a GitRewrite run files are not actually deleted from the file system. To do this you should run
 ```
-git reflog expire --expire=now && git gc --aggressive
+git reflog expire --expire=now --all && git gc --aggressive
 ```
 Instead of git gc --aggressive you might want to use something faster like git gc --prune=now, while the result may not be as good.
 
