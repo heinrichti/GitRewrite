@@ -40,19 +40,19 @@ namespace GitRewrite
                 using (var removeEmptyCommitsTask = new RemoveEmptyCommitsTask(options.RepositoryPath))
                     removeEmptyCommitsTask.Run();
             }
-            else if (!string.IsNullOrWhiteSpace(options.ContributerMappingFile))
+            else if (!string.IsNullOrWhiteSpace(options.ContributorMappingFile))
             {
-                using (var rewriteContributerTask = new RewriteContributerTask(options.RepositoryPath, options.ContributerMappingFile))
-                    rewriteContributerTask.Run();
+                using (var rewriteContributorTask = new RewriteContributorTask(options.RepositoryPath, options.ContributorMappingFile))
+                    rewriteContributorTask.Run();
             }
-            else if (options.ListContributerNames)
+            else if (options.ListContributorNames)
             {
-                foreach (var contributer in CommitWalker.CommitsRandomOrder(options.RepositoryPath)
+                foreach (var contributor in CommitWalker.CommitsRandomOrder(options.RepositoryPath)
                     .SelectMany(commit => new[] {commit.GetAuthorName(), commit.GetCommitterName()})
                     .Distinct()
                     .AsParallel()
                     .OrderBy(x => x))
-                    Console.WriteLine(contributer);
+                    Console.WriteLine(contributor);
             }
         }
 
