@@ -10,7 +10,7 @@ namespace GitRewrite
         {
         }
 
-        public bool ListContributerNames { get; private set; }
+        public bool ListContributorNames { get; private set; }
 
         public bool ShowHelp { get; private set; }
 
@@ -24,7 +24,7 @@ namespace GitRewrite
 
         public bool RemoveEmptyCommits { get; private set; }
 
-        public string ContributerMappingFile { get; private set; }
+        public string ContributorMappingFile { get; private set; }
 
         public bool ProtectRefs { get; private set; }
 
@@ -33,7 +33,7 @@ namespace GitRewrite
             options = new CommandLineOptions();
             var deleteFilesStarted = false;
             var deleteFoldersStarted = false;
-            var rewriteContributersFileExpected = false;
+            var rewriteContributorsFileExpected = false;
 
             foreach (var arg in args)
                 if (deleteFilesStarted)
@@ -46,10 +46,10 @@ namespace GitRewrite
                     options.FoldersToDelete.AddRange(GetFiles(arg));
                     deleteFoldersStarted = false;
                 }
-                else if (rewriteContributersFileExpected)
+                else if (rewriteContributorsFileExpected)
                 {
-                    options.ContributerMappingFile = arg;
-                    rewriteContributersFileExpected = false;
+                    options.ContributorMappingFile = arg;
+                    rewriteContributorsFileExpected = false;
                 }
                 else
                 {
@@ -73,11 +73,11 @@ namespace GitRewrite
                         case "--help":
                             options.ShowHelp = true;
                             break;
-                        case "--contributer-names":
-                            options.ListContributerNames = true;
+                        case "--contributor-names":
+                            options.ListContributorNames = true;
                             break;
-                        case "--rewrite-contributers":
-                            rewriteContributersFileExpected = true;
+                        case "--rewrite-contributors":
+                            rewriteContributorsFileExpected = true;
                             break;
                         case "--protect-refs":
                             options.ProtectRefs = true;
@@ -99,8 +99,8 @@ namespace GitRewrite
             optionsSet += options.FixTrees ? 1 : 0;
             optionsSet += options.FilesToDelete.Any() || options.FoldersToDelete.Any() ? 1 : 0;
             optionsSet += options.RemoveEmptyCommits ? 1 : 0;
-            optionsSet += options.ListContributerNames ? 1 : 0;
-            optionsSet += !string.IsNullOrWhiteSpace(options.ContributerMappingFile) ? 1 : 0;
+            optionsSet += options.ListContributorNames ? 1 : 0;
+            optionsSet += !string.IsNullOrWhiteSpace(options.ContributorMappingFile) ? 1 : 0;
 
             if (optionsSet > 1)
             {
@@ -150,15 +150,14 @@ namespace GitRewrite
             Console.WriteLine("  Can be combined with deleting files.");
             Console.WriteLine();
 
-            
-            Console.WriteLine("--rewrite-contributers [contributers.txt]");
+            Console.WriteLine("--rewrite-contributors [contributors.txt]");
             Console.WriteLine("  Rewrite author and committer information.");
-            Console.WriteLine("  contributers.txt is the mapping file for the names that should be replaced. Each line represents one contributer to replace.");
+            Console.WriteLine("  contributors.txt is the mapping file for the names that should be replaced. Each line represents one contributor to replace.");
             Console.WriteLine("  Format is ");
             Console.WriteLine("      Test User <test@user.com> = New Test User <newtest@user.comm>");
             Console.WriteLine();
 
-            Console.WriteLine("--contributer-names");
+            Console.WriteLine("--contributor-names");
             Console.WriteLine("  Writes all authors and committers to stdout");
             Console.WriteLine();
 
