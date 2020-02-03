@@ -6,21 +6,21 @@ using GitRewrite.GitObjects;
 
 namespace GitRewrite.CleanupTask
 {
-    class RewriteContributerTask : CleanupTaskBase<Commit>
+    class RewriteContributorTask : CleanupTaskBase<Commit>
     {
-        private readonly Dictionary<string, string> _contributerMappings = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _contributorMappings = new Dictionary<string, string>();
 
-        public RewriteContributerTask(string repositoryPath, string contributerMappingFile) : base(repositoryPath)
+        public RewriteContributorTask(string repositoryPath, string contributorMappingFile) : base(repositoryPath)
         {
-            var contributerMappingLines = File.ReadAllLines(contributerMappingFile);
+            var contributorMappingLines = File.ReadAllLines(contributorMappingFile);
 
-            foreach (var line in contributerMappingLines)
+            foreach (var line in contributorMappingLines)
             {
-                var contributerMapping = line.Split('=').Select(x => x.Trim()).ToList();
-                if (contributerMapping.Count != 2)
+                var contributorMapping = line.Split('=').Select(x => x.Trim()).ToList();
+                if (contributorMapping.Count != 2)
                     throw new ArgumentException("Mapping is not formatted properly.");
 
-                _contributerMappings.Add(contributerMapping[0], contributerMapping[1]);
+                _contributorMappings.Add(contributorMapping[0], contributorMapping[1]);
             }
         }
 
@@ -29,7 +29,7 @@ namespace GitRewrite.CleanupTask
         protected override void SynchronousStep(Commit commit)
         {
             var rewrittenParentHashes = GetRewrittenCommitHashes(commit.Parents);
-            var changedCommit = commit.WithChangedContributer(_contributerMappings, rewrittenParentHashes);
+            var changedCommit = commit.WithChangedContributor(_contributorMappings, rewrittenParentHashes);
 
             var resultBytes = GitObjectFactory.GetBytesWithHeader(GitObjectType.Commit, changedCommit);
             var newCommitHash = new ObjectHash(Hash.Create(resultBytes));

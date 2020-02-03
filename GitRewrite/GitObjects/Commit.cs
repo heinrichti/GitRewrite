@@ -61,20 +61,20 @@ namespace GitRewrite.GitObjects
 
         private static readonly byte[] PgpSignatureEnd = "-----END PGP SIGNATURE-----".Select(c => (byte) c).ToArray();
 
-        public ReadOnlySpan<byte> GetCommitterBytes() => GetContributerName(_committerLine.Slice(10));
+        public ReadOnlySpan<byte> GetCommitterBytes() => GetContributorName(_committerLine.Slice(10));
 
         public string GetCommitterName() => Encoding.UTF8.GetString(GetCommitterBytes());
 
-        public ReadOnlySpan<byte> GetAuthorBytes() => GetContributerName(_authorLine.Slice(7));
+        public ReadOnlySpan<byte> GetAuthorBytes() => GetContributorName(_authorLine.Slice(7));
 
         public string GetAuthorName() => Encoding.UTF8.GetString(GetAuthorBytes());
 
-        private ReadOnlySpan<byte> GetContributerName(in ReadOnlyMemory<byte> contributerWithTime)
+        private ReadOnlySpan<byte> GetContributorName(in ReadOnlyMemory<byte> contributorWithTime)
         {
-            var span = contributerWithTime.Span;
+            var span = contributorWithTime.Span;
             int spaces = 0;
             int index = 0;
-            for (int i = contributerWithTime.Length - 1; i >= 0; i--)
+            for (int i = contributorWithTime.Length - 1; i >= 0; i--)
             {
                 if (span[i] == ' ' && ++spaces == 2)
                 {
@@ -83,7 +83,7 @@ namespace GitRewrite.GitObjects
                 }
             }
 
-            return contributerWithTime.Span.Slice(0, index);
+            return contributorWithTime.Span.Slice(0, index);
         }
 
         public ObjectHash TreeHash => new ObjectHash(_treeHash.Span.Slice(5));
@@ -145,17 +145,17 @@ namespace GitRewrite.GitObjects
             return resultBuffer;
         }
 
-        public byte[] WithChangedContributer(Dictionary<string, string> contributerMapping, IEnumerable<ObjectHash> parents)
+        public byte[] WithChangedContributor(Dictionary<string, string> contributorMapping, IEnumerable<ObjectHash> parents)
         {
             const int firstLineLength = 46;
             const int parentLineLength = 7 + 40 + 1;
 
             var author = GetAuthorName();
             var committer = GetCommitterName();
-            if (!contributerMapping.TryGetValue(author, out var newAuthor))
+            if (!contributorMapping.TryGetValue(author, out var newAuthor))
                 newAuthor = author;
 
-            if (!contributerMapping.TryGetValue(this.GetCommitterName(), out var newCommitter))
+            if (!contributorMapping.TryGetValue(this.GetCommitterName(), out var newCommitter))
                 newCommitter = committer;
 
             var authorLine = Encoding.UTF8.GetBytes(Encoding.UTF8.GetString(this._authorLine.Span).Replace(author, newAuthor));
