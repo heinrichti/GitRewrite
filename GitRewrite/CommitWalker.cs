@@ -58,7 +58,7 @@ namespace GitRewrite
                 }
         }
 
-        private static ConcurrentStack<Commit> ReadCommitsFromRefs(string vcsPath)
+        internal static ConcurrentStack<Commit> ReadCommitsFromRefs(string vcsPath)
         {
             var refs = Refs.ReadAll(vcsPath);
             var addedCommits = new ConcurrentDictionary<ObjectHash, bool>();
