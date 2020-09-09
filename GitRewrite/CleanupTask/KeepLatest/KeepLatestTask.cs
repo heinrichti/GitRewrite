@@ -15,7 +15,6 @@ namespace GitRewrite.CleanupTask.KeepLatest
 
         private readonly ConcurrentDictionary<ObjectHash, ObjectHash> _rewrittenTrees =
             new ConcurrentDictionary<ObjectHash, ObjectHash>();
-        private readonly int protectedRevisionsCount;
         private HashSet<ObjectHash> _commitsToSkip;
 
         public KeepLatestTask(string repositoryPath, string fileToDelete, int protectedRevisionsCount)
@@ -24,7 +23,6 @@ namespace GitRewrite.CleanupTask.KeepLatest
             _commitsToSkip = new HashSet<ObjectHash>();
 
             _fileName = System.Text.Encoding.UTF8.GetBytes(fileToDelete);
-            this.protectedRevisionsCount = protectedRevisionsCount;
 
             var commits = CommitWalker.ReadCommitsFromRefs(RepositoryPath);
             var commitsProcessed = new HashSet<ObjectHash>();

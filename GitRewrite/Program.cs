@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using GitRewrite.CleanupTask;
 using GitRewrite.CleanupTask.Delete;
+using GitRewrite.CleanupTask.KeepLatest;
 using GitRewrite.GitObjects;
 using GitRewrite.IO;
 using Commit = GitRewrite.GitObjects.Commit;
@@ -22,7 +23,12 @@ namespace GitRewrite
 
             PackReader.InitializePackFiles(options.RepositoryPath);
 
-            if (options.FixTrees)
+            if (options.KeepLatest)
+            {
+                using (var task = new KeepLatestTask(options.RepositoryPath, options.FilesToDelete.Single(), options.KeepLatestCount))
+                    task.Run();
+            }
+            else if (options.FixTrees)
             {
                 var defectiveCommits = FindCommitsWithDuplicateTreeEntries(options.RepositoryPath).ToList();
 
