@@ -28,15 +28,36 @@ namespace GitRewrite
 
         public bool ProtectRefs { get; private set; }
 
+        public bool KeepLatest { get; private set; }
+
+        public int KeepLatestCount { get; private set; } = 1;
+
         internal static bool TryParse(string[] args, out CommandLineOptions options)
         {
             options = new CommandLineOptions();
             var deleteFilesStarted = false;
             var deleteFoldersStarted = false;
             var rewriteContributorsFileExpected = false;
+            int keepLatestStarted = 0;
 
             foreach (var arg in args)
-                if (deleteFilesStarted)
+            {
+                if (keepLatestStarted == 1 && int.TryParse(arg, out var keepLatestCount))
+                { 
+                    options.KeepLatestCount = keepLatestCount;
+                    keepLatestStarted = 2;
+                }
+                else if (keepLatestStarted == 1)
+                {
+                    options.FilesToDelete.Add(arg);
+                    keepLatestStarted = 0;
+                }
+                else if (keepLatestStarted == 2)
+                {
+                    options.FilesToDelete.Add(arg);
+                    keepLatestStarted = 0;
+                }
+                else if (deleteFilesStarted)
                 {
                     options.FilesToDelete.AddRange(GetFiles(arg));
                     deleteFilesStarted = false;
@@ -53,6 +74,7 @@ namespace GitRewrite
                 }
                 else
                 {
+                    keepLatestStarted = 0;
                     switch (arg)
                     {
                         case "-e":
@@ -82,6 +104,10 @@ namespace GitRewrite
                         case "--protect-refs":
                             options.ProtectRefs = true;
                             break;
+                        case "--keep-latest":
+                            options.KeepLatest = true;
+                            keepLatestStarted = 1;
+                            break;
                         default:
                             if (arg.StartsWith("-"))
                                 throw new ArgumentException("Could not parse arguments.");
@@ -94,6 +120,7 @@ namespace GitRewrite
                             break;
                     }
                 }
+            }
 
             var optionsSet = 0;
             optionsSet += options.FixTrees ? 1 : 0;
@@ -160,6 +187,10 @@ namespace GitRewrite
             Console.WriteLine("--contributor-names");
             Console.WriteLine("  Writes all authors and committers to stdout");
             Console.WriteLine();
+
+            Console.WriteLine("--keep-latest [n] filename");
+            Console.WriteLine("  Deletes a single file but keeps the latest n revisions of the file.");
+            Console.WriteLine("  n is optional, the default is 3.");
 
             Console.WriteLine("--fix-trees");
             Console.WriteLine(
