@@ -28,7 +28,7 @@ namespace GitRewrite.CleanupTask.KeepLatest
             var commitsProcessed = new HashSet<ObjectHash>();
             var treesVisited = new Dictionary<ObjectHash, bool>();
 
-            var commitsToProtect = new List<Commit>();
+            var commitsToProtect = new SortedList<long, Commit>();
 
             while (commits.TryPop(out var commit))
             {
@@ -44,17 +44,33 @@ namespace GitRewrite.CleanupTask.KeepLatest
                 {
                     // file is in the commit, candidate for protection
                     if (commitsToProtect.Count < protectedRevisionsCount)
-                        commitsToProtect.Add(commit);
+                        commitsToProtect.Add(long.Parse(commit.GetCommitTime()), commit);
                     else
                     {
-                        // TODO how to parse the date line correctly? Take the date from the committer or the author?
-                        // As a test just take the first three and be done with...
+                        var time = long.Parse(commit.GetCommitTime());
+                        long removeTime = -1;
+
+                        foreach (var item in commitsToProtect)
+                        {
+                            if (item.Key < time)
+                            {
+                                removeTime = item.Key;
+                                break;
+                            }
+                        }
+
+                        if (removeTime != -1)
+                        {
+                            commitsToProtect.Remove(removeTime);
+                            commitsToProtect.Add(time, commit);
+                        }
+
                         break;
                     }
                 }
             }
 
-            _commitsToSkip = new HashSet<ObjectHash>(commitsToProtect.Select(x => x.Hash));
+            _commitsToSkip = new HashSet<ObjectHash>(commitsToProtect.Select(x => x.Value.Hash));
         }
 
         protected override (Commit Commit, ObjectHash NewTreeHash) ParallelStep(Commit commit)

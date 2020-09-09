@@ -86,6 +86,36 @@ namespace GitRewrite.GitObjects
             return contributorWithTime.Span.Slice(0, index);
         }
 
+        public string GetCommitTime() => Encoding.UTF8.GetString(GetTime(_committerLine.Slice(10)));
+
+        private ReadOnlySpan<byte> GetTime(in ReadOnlyMemory<byte> contributorWithTime)
+        {
+            var span = contributorWithTime.Span;
+            int spaces = 0;
+            int index = 0;
+            for (int i = contributorWithTime.Length - 1; i >= 0; i--)
+            {
+                if (span[i] == ' ' && ++spaces == 2)
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            int endIndex = contributorWithTime.Length;
+
+            // cut off the timezone
+            for (int i = contributorWithTime.Length - 1; i >= index ; i--)
+            {
+                if (span[i] == '+')
+                {
+                    endIndex = i - 1;
+                }
+            }
+
+            return contributorWithTime.Span.Slice(index+1, endIndex - index - 1);
+        }
+
         public ObjectHash TreeHash => new ObjectHash(_treeHash.Span.Slice(5));
 
         public List<ObjectHash> Parents => _parents;
