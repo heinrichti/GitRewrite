@@ -92,7 +92,7 @@ Currently we are building with .NET Core 2.1, so the SDK should be installed.
 ```
 git clone https://github.com/TimHeinrich/GitRewrite.git
 cd GitRewrite
-dotnet publish --self-contained -r win-x64 -c Release 
+dotnet publish --self-contained -r win-x64 -c Release GitRewrite
 ```
 
 ## Icon attribution
