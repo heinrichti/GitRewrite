@@ -107,7 +107,7 @@ namespace GitRewrite.GitObjects
             // cut off the timezone
             for (int i = contributorWithTime.Length - 1; i >= index ; i--)
             {
-                if (span[i] == '+')
+                if (span[i] == '+' || span[i] == '-')
                 {
                     endIndex = i - 1;
                 }
