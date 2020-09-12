@@ -86,7 +86,9 @@ namespace GitRewrite.GitObjects
             return contributorWithTime.Span.Slice(0, index);
         }
 
-        public string GetCommitTime() => Encoding.UTF8.GetString(GetTime(_committerLine.Slice(10)));
+        public string GetCommitTimeString() => Encoding.UTF8.GetString(GetTime(_committerLine.Slice(10)));
+
+        public long GetCommitTime() => long.Parse(GetCommitTimeString());
 
         private ReadOnlySpan<byte> GetTime(in ReadOnlyMemory<byte> contributorWithTime)
         {

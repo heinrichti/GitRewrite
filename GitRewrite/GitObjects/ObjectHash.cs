@@ -7,6 +7,8 @@ namespace GitRewrite.GitObjects
         private readonly int _hashCode;
         private const int ByteHashLength = 20;
 
+        public static ObjectHash Empty;
+
         public ObjectHash(byte[] hash)
         {
             if (hash.Length != ByteHashLength)
@@ -42,8 +44,11 @@ namespace GitRewrite.GitObjects
 
         public bool Equals(ObjectHash other)
         {
-            if (_hashCode != other._hashCode)
+            if ((_hashCode != other._hashCode) || (Bytes == null && other.Bytes != null) || (Bytes != null && other.Bytes == null))
                 return false;
+
+            if (Bytes == null && other.Bytes == null)
+                return true;
 
             for (int i = 0; i < 20; i++)
             {

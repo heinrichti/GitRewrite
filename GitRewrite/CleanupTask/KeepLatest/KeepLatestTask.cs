@@ -15,20 +15,20 @@ namespace GitRewrite.CleanupTask.KeepLatest
 
         private readonly ConcurrentDictionary<ObjectHash, ObjectHash> _rewrittenTrees =
             new ConcurrentDictionary<ObjectHash, ObjectHash>();
-        private HashSet<ObjectHash> _commitsToSkip;
+        private HashSet<ObjectHash> _blobsToProtect;
 
         public KeepLatestTask(string repositoryPath, string fileToDelete, int protectedRevisionsCount)
             : base(repositoryPath)
         {
-            _commitsToSkip = new HashSet<ObjectHash>();
+            _blobsToProtect = new HashSet<ObjectHash>();
 
             _fileName = System.Text.Encoding.UTF8.GetBytes(fileToDelete);
 
             var commits = CommitWalker.ReadCommitsFromRefs(RepositoryPath);
             var commitsProcessed = new HashSet<ObjectHash>();
-            var treesVisited = new Dictionary<ObjectHash, bool>();
+            var treesVisited = new Dictionary<ObjectHash, ObjectHash>();
 
-            var commitsToProtect = new SortedList<long, Commit>();
+            var blobsToProtect = new Dictionary<ObjectHash, long>();
 
             while (commits.TryPop(out var commit))
             {
@@ -40,29 +40,39 @@ namespace GitRewrite.CleanupTask.KeepLatest
                     commits.Push(GitObjectFactory.ReadCommit(RepositoryPath, parent));
                 }
 
-                if (TreeContainsObject(commit.TreeHash, treesVisited))
+                if (TreeContainsObject(commit.TreeHash, treesVisited, out var blobHash))
                 {
+                    if (blobsToProtect.TryGetValue(blobHash, out var changedTime))
+                    {
+                        // the same blob was already seen, update commit time if this is later
+                        if (changedTime < commit.GetCommitTime())
+                            blobsToProtect[blobHash] = commit.GetCommitTime();
+
+                        continue;
+                    }
+
                     // file is in the commit, candidate for protection
-                    if (commitsToProtect.Count < protectedRevisionsCount)
-                        commitsToProtect.Add(long.Parse(commit.GetCommitTime()), commit);
+                    if (blobsToProtect.Count < protectedRevisionsCount)
+                        blobsToProtect.Add(blobHash, commit.GetCommitTime());
                     else
                     {
-                        var time = long.Parse(commit.GetCommitTime());
-                        long removeTime = -1;
+                        var commitTime = commit.GetCommitTime();
+                        long blobToReplaceCommitTime = -1;
+                        ObjectHash blobToReplace = ObjectHash.Empty;
 
-                        foreach (var item in commitsToProtect)
+                        foreach (var item in blobsToProtect)
                         {
-                            if (item.Key < time)
+                            if (item.Value < commitTime && blobToReplaceCommitTime < commitTime)
                             {
-                                removeTime = item.Key;
-                                break;
+                                blobToReplaceCommitTime = commitTime;
+                                blobToReplace = item.Key;
                             }
                         }
 
-                        if (removeTime != -1)
+                        if (blobToReplace != ObjectHash.Empty)
                         {
-                            commitsToProtect.Remove(removeTime);
-                            commitsToProtect.Add(time, commit);
+                            blobsToProtect.Remove(blobToReplace);
+                            blobsToProtect.Add(blobToReplace, commitTime);
                         }
 
                         break;
@@ -70,13 +80,11 @@ namespace GitRewrite.CleanupTask.KeepLatest
                 }
             }
 
-            _commitsToSkip = new HashSet<ObjectHash>(commitsToProtect.Select(x => x.Value.Hash));
+            _blobsToProtect = new HashSet<ObjectHash>(blobsToProtect.Select(x => x.Key));
         }
 
         protected override (Commit Commit, ObjectHash NewTreeHash) ParallelStep(Commit commit)
-            => (commit, _commitsToSkip.Contains(commit.Hash)
-                ? commit.TreeHash
-                : RemoveObjectFromTree(RepositoryPath, commit.TreeHash,
+            => (commit, RemoveObjectFromTree(RepositoryPath, commit.TreeHash,
                     _rewrittenTrees, new byte[0]));
 
         protected override void SynchronousStep((Commit Commit, ObjectHash NewTreeHash) removalResult)
@@ -96,35 +104,39 @@ namespace GitRewrite.CleanupTask.KeepLatest
             }
         }
 
-        public bool DeleteObject(in ReadOnlySpan<byte> fileName) =>
-            fileName.SpanEquals(_fileName);
+        public bool DeleteObject(in ReadOnlySpan<byte> fileName, in ObjectHash blobHash) =>
+            fileName.SpanEquals(_fileName) && !_blobsToProtect.Contains(blobHash);
 
         private bool TreeContainsObject(
             ObjectHash treeHash,
-            Dictionary<ObjectHash, bool> treesVisited)
+            Dictionary<ObjectHash, ObjectHash> treesVisited,
+            out ObjectHash foundTreeHash)
         {
-            if (treesVisited.TryGetValue(treeHash, out var result))
-                return result;
+            if (treesVisited.TryGetValue(treeHash, out foundTreeHash))
+            {
+                return foundTreeHash != ObjectHash.Empty;
+            }
 
             var tree = GitObjectFactory.ReadTree(RepositoryPath, treeHash);
             foreach (var line in tree.Lines)
             {
                 if (line.IsDirectory())
                 {
-                    if (TreeContainsObject(line.Hash, treesVisited))
+                    if (TreeContainsObject(line.Hash, treesVisited, out foundTreeHash))
                     {
-                        treesVisited.Add(treeHash, true);
-                        return true;
+                        treesVisited.Add(treeHash, foundTreeHash);
+                        return foundTreeHash != ObjectHash.Empty;
                     }
                 }
-                else if (DeleteObject(line.FileNameBytes.Span))
+                else if (DeleteObject(line.FileNameBytes.Span, line.Hash))
                 {
-                    treesVisited.Add(treeHash, true);
+                    treesVisited.Add(treeHash, line.Hash);
+                    foundTreeHash = line.Hash;
                     return true;
                 }
             }
 
-            treesVisited.Add(treeHash, false);
+            treesVisited.Add(treeHash, ObjectHash.Empty);
             return false;
         }
 
@@ -136,9 +148,6 @@ namespace GitRewrite.CleanupTask.KeepLatest
         {
             if (rewrittenTrees.TryGetValue(treeHash, out var rewrittenHash))
                 return rewrittenHash;
-
-            //if (!IsPathRelevant(currentPath, relevantPathes))
-            //    return treeHash;
 
             var tree = GitObjectFactory.ReadTree(vcsPath, treeHash);
             var resultingLines = new List<Tree.TreeLine>();
@@ -161,7 +170,7 @@ namespace GitRewrite.CleanupTask.KeepLatest
                 }
                 else
                 {
-                    if (!DeleteObject(line.FileNameBytes.Span))
+                    if (!DeleteObject(line.FileNameBytes.Span, line.Hash))
                         resultingLines.Add(line);
                 }
 
@@ -182,33 +191,6 @@ namespace GitRewrite.CleanupTask.KeepLatest
             rewrittenTrees.TryAdd(treeHash, fixedTree.Hash);
 
             return fixedTree.Hash;
-        }
-
-        private static bool IsPathRelevant(in ReadOnlySpan<byte> currentPath, List<byte[]> relevantPathes)
-        {
-            if (currentPath.Length == 0 || !relevantPathes.Any())
-                return true;
-
-            for (var i = relevantPathes.Count - 1; i >= 0; i--)
-            {
-                var path = relevantPathes[i];
-
-                if (currentPath.Length > path.Length)
-                    continue;
-
-                var isRelevant = true;
-                for (var j = currentPath.Length - 1; j >= 0; j--)
-                    if (currentPath[j] != path[j])
-                    {
-                        isRelevant = false;
-                        break;
-                    }
-
-                if (isRelevant)
-                    return true;
-            }
-
-            return false;
         }
     }
 }
