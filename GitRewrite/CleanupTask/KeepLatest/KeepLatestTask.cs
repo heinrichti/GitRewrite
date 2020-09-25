@@ -44,8 +44,8 @@ namespace GitRewrite.CleanupTask.KeepLatest
                 {
                     if (blobsToProtect.TryGetValue(blobHash, out var changedTime))
                     {
-                        // the same blob was already seen, update commit time if this is later
-                        if (changedTime < commit.GetCommitTime())
+                        // the same blob was already seen, update commit time if this is earlier
+                        if (changedTime > commit.GetCommitTime())
                             blobsToProtect[blobHash] = commit.GetCommitTime();
 
                         continue;
@@ -74,8 +74,6 @@ namespace GitRewrite.CleanupTask.KeepLatest
                             blobsToProtect.Remove(blobToReplace);
                             blobsToProtect.Add(blobToReplace, commitTime);
                         }
-
-                        break;
                     }
                 }
             }

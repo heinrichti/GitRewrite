@@ -30,7 +30,7 @@ namespace GitRewrite
 
         public bool KeepLatest { get; private set; }
 
-        public int KeepLatestCount { get; private set; } = 1;
+        public int KeepLatestCount { get; private set; } = 3;
 
         internal static bool TryParse(string[] args, out CommandLineOptions options)
         {
@@ -189,8 +189,9 @@ namespace GitRewrite
             Console.WriteLine();
 
             Console.WriteLine("--keep-latest [n] filename");
-            Console.WriteLine("  Deletes a single file but keeps the latest n revisions of the file.");
+            Console.WriteLine("  EXPERIMENTAL! Deletes a single file but keeps the latest n revisions of the file.");
             Console.WriteLine("  n is optional, the default is 3.");
+            Console.WriteLine();
 
             Console.WriteLine("--fix-trees");
             Console.WriteLine(
