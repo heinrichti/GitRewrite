@@ -58,18 +58,18 @@ GitRewrite solves this problem by rewriting the trees by removing the duplicates
 GitRewrite C:/VCS/MyRepo --fix-trees
 ```
 
-### List contributer names
+### List contributor names
 Lists all authors and committers.
 ```
-GitRewrite C:/VCS/MyRepo --contributer-names
+GitRewrite C:/VCS/MyRepo --contributor-names
 ```
 
-### Rewrite all contributer names
+### Rewrite all contributor names
 ```
-GitRewrite C:/VCS/MyRepo --rewrite-contributers [contributers.txt]
+GitRewrite C:/VCS/MyRepo --rewrite-contributors [contributors.txt]
 ```
 Rewrites authors and committers.
-The contributers.txt is the mapping from old contributer name to new contributer name:
+The contributors.txt is the mapping from old contributor name to new contributor name:
   Old User \<old@gmail.com> = New User \<new@gmail.com>
 
 ### General 
