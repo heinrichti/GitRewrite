@@ -86,7 +86,7 @@ namespace GitRewrite.IO
 
                 foreach (var offset in IdxOffsetReader.GetPackOffsets(file.IdxFilePath))
                 {
-                    offsets.Add(new ObjectHash(offset.Hash), (viewAccessor, offset.Offset));
+                    offsets.TryAdd(new ObjectHash(offset.Hash), (viewAccessor, offset.Offset));
                 }
             }
 
