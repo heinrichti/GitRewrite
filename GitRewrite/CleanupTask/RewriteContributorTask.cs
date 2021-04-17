@@ -14,7 +14,7 @@ namespace GitRewrite.CleanupTask
         {
             var contributorMappingLines = File.ReadAllLines(contributorMappingFile);
 
-            foreach (var line in contributorMappingLines)
+            foreach (var line in contributorMappingLines.Where(x => !string.IsNullOrWhiteSpace(x)))
             {
                 var contributorMapping = line.Split('=').Select(x => x.Trim()).ToList();
                 if (contributorMapping.Count != 2)
