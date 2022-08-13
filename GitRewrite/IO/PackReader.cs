@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Linq;
+using GitRewrite.Diff;
 using GitRewrite.GitObjects;
 
 namespace GitRewrite.IO
@@ -106,7 +107,6 @@ namespace GitRewrite.IO
             if (offset == -1)
                 return null;
 
-
             var packObject = ReadPackObject(viewAccessor, offset);
 
             byte[] unpackedBytes;
@@ -142,140 +142,23 @@ namespace GitRewrite.IO
             throw new NotImplementedException();
         }
 
-        private static readonly ArrayPool<byte> DiffBytesPool = ArrayPool<byte>.Shared;
-
         public static (int Type, byte[] Bytes) RestoreDiffedObjectBytes(MemoryMappedViewAccessor memory,
             PackObject packObject)
         {
-            var deltaStack = new Stack<Memory<byte>>();
-            var bytesToFree = new Stack<byte[]>();
+            var packDiff = new PackDiff(memory, packObject);
+
+            packObject = ReadPackObject(memory, packObject.Offset - packDiff.NegativeOffset);
 
             while (packObject.Type == 6)
             {
-                var buffer = DiffBytesPool.Rent(packObject.DataSize);
-                var deltaData = buffer.AsMemory(0, packObject.DataSize);
-                deltaStack.Push(deltaData);
-                bytesToFree.Push(buffer);
-
-                var deltaOffset = ReadDeltaOffset(memory, packObject);
-                HashContent.UnpackTo(memory, packObject, buffer, deltaOffset.BytesRead);
-                packObject = ReadPackObject(memory, packObject.Offset - deltaOffset.NegativeOffset);
-            }
-            
-            var type = packObject.Type;
-
-            var restoredObjectBytesFromPool = DiffBytesPool.Rent(packObject.DataSize);
-            Span<byte> restoredBytesSpan = restoredObjectBytesFromPool.AsSpan(0, packObject.DataSize);
-
-            HashContent.UnpackTo(memory, packObject, restoredObjectBytesFromPool);
-
-            Span<byte> targetBuffer = null;
-            while (deltaStack.TryPop(out var deltaData))
-            {
-                var deltaDataSpan = deltaData.Span;
-                var (_, deltaOffset) = ReadVariableDeltaOffsetLength(deltaDataSpan);
-                int targetLength;
-                (targetLength, deltaOffset) = ReadVariableDeltaOffsetLength(deltaDataSpan, deltaOffset);
-
-                var targetBufferFromPool = DiffBytesPool.Rent(targetLength);
-                targetBuffer = targetBufferFromPool.AsSpan(0, targetLength);
-
-                var currentTargetOffset = 0;
-                while (deltaOffset < deltaData.Length)
-                {
-                    ApplyDeltaInstruction(restoredBytesSpan, targetBuffer, deltaDataSpan, ref deltaOffset,
-                        ref currentTargetOffset);
-                }
-                DiffBytesPool.Return(restoredObjectBytesFromPool);
-                restoredObjectBytesFromPool = targetBufferFromPool;
-                restoredBytesSpan = targetBuffer;
-
-                DiffBytesPool.Return(bytesToFree.Pop());
+                // OFS_DELTA
+                var targetDiff = new PackDiff(memory, packObject);
+                packDiff = packDiff.Combine(targetDiff);
+                packObject = ReadPackObject(memory, packObject.Offset - packDiff.NegativeOffset);
             }
 
-            var result = targetBuffer.ToArray();
-
-            DiffBytesPool.Return(restoredObjectBytesFromPool);
-
-            return (type, result);
-        }
-
-        private static void ApplyDeltaInstruction(in ReadOnlySpan<byte> source, Span<byte> target, in ReadOnlySpan<byte> deltaData,
-            ref int currentDeltaOffset, ref int currentTargetBufferOffset)
-        {
-            var instruction = deltaData[currentDeltaOffset];
-
-            if ((instruction & 0b10000000) != 0)
-                HandleCopyInstruction(source, target, deltaData, ref currentDeltaOffset, ref currentTargetBufferOffset);
-            else
-                HandleInsertInstruction(target, deltaData, ref currentDeltaOffset,
-                    ref currentTargetBufferOffset);
-        }
-
-        private static void HandleInsertInstruction(in Span<byte> target, in ReadOnlySpan<byte> deltaData,
-            ref int currentDeltaOffset, ref int currentTargetOffset)
-        {
-            var bytesToCopy = deltaData[currentDeltaOffset++];
-            deltaData.Slice(currentDeltaOffset, bytesToCopy).CopyTo(target.Slice(currentTargetOffset, bytesToCopy));
-
-            currentDeltaOffset += bytesToCopy;
-            currentTargetOffset += bytesToCopy;
-        }
-
-        private static void HandleCopyInstruction(in ReadOnlySpan<byte> source, in Span<byte> target, in ReadOnlySpan<byte> deltaData,
-            ref int currentDeltaOffset, ref int currentTargetOffset)
-        {
-            var copyInstruction = deltaData[currentDeltaOffset++];
-
-            var offset = 0;
-            var length = 0;
-
-            if ((copyInstruction & 0b00000001) != 0)
-                offset |= deltaData[currentDeltaOffset++];
-
-            if ((copyInstruction & 0b00000010) != 0)
-                offset |= deltaData[currentDeltaOffset++] << 8;
-
-            if ((copyInstruction & 0b00000100) != 0)
-                offset |= deltaData[currentDeltaOffset++] << 16;
-
-            if ((copyInstruction & 0b00001000) != 0)
-                offset |= deltaData[currentDeltaOffset++] << 24;
-
-            if ((copyInstruction & 0b00010000) != 0)
-                length |= deltaData[currentDeltaOffset++];
-
-            if ((copyInstruction & 0b00100000) != 0)
-                length |= deltaData[currentDeltaOffset++] << 8;
-
-            if ((copyInstruction & 0b01000000) != 0)
-                length |= deltaData[currentDeltaOffset++] << 16;
-
-            if (length == 0)
-                length = 0x10000;
-
-            var sourceSlice = source.Slice(offset, length);
-            var targetSlice = target.Slice(currentTargetOffset, length);
-            sourceSlice.CopyTo(targetSlice);
-            currentTargetOffset += length;
-        }
-
-        private static (int targetLength, int deltaOffset) ReadVariableDeltaOffsetLength(in ReadOnlySpan<byte> deltaData,
-            int offset = 0)
-        {
-            var b = deltaData[offset++];
-            var length = b & 0b01111111;
-            var fsbSet = (b & 0b10000000) != 0;
-            var shift = 7;
-            while (fsbSet)
-            {
-                b = deltaData[offset++];
-                fsbSet = (b & 0b10000000) != 0;
-                length |= (b & 0b01111111) << shift;
-                shift += 7;
-            }
-
-            return (length, offset);
+            var content = HashContent.Unpack(memory, packObject, 0);
+            return (packObject.Type, packDiff.Apply(content));
         }
 
         private static PackObject ReadPackObject(MemoryMappedViewAccessor file, long offset)
@@ -296,23 +179,6 @@ namespace GitRewrite.IO
             }
 
             return new PackObject(type, offset, bytesRead, dataSize);
-        }
-
-        public static (long NegativeOffset, int BytesRead) ReadDeltaOffset(MemoryMappedViewAccessor packFile, PackObject packObject)
-        {
-            var readByte = packFile.ReadByte(packObject.Offset + packObject.HeaderLength);
-            var bytesRead = 1;
-            var offset = (long) readByte & 127;
-
-            while ((readByte & 128) != 0)
-            {
-                offset += 1;
-                readByte = packFile.ReadByte(packObject.Offset + packObject.HeaderLength + bytesRead++);
-                offset <<= 7;
-                offset += (long) readByte & 127;
-            }
-
-            return (offset, bytesRead);
         }
     }
 }
