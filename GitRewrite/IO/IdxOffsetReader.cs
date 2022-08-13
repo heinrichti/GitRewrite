@@ -57,7 +57,7 @@ namespace GitRewrite.IO
                     bufferedStream.Seek(HashesTableStart + HashLength * objectCount + 4 * objectCount,
                         SeekOrigin.Begin);
 
-                    List<(byte[] Hash, long Offset)> largeOffsets = new List<(byte[], long)>();
+                    List<byte[]> largeOffsets = new List<byte[]>();
 
                     for (var i = 0; i < objectCount; i++)
                     {
@@ -70,7 +70,7 @@ namespace GitRewrite.IO
                         offset += (packOffset[0] & 0b01111111) << 24;
 
                         if (MsbSet(packOffset))
-                            largeOffsets.Add((hashes.Dequeue(), offset));
+                            largeOffsets.Add(hashes.Dequeue());
                         else
                             yield return (hashes.Dequeue(), offset);
                     }
@@ -80,7 +80,7 @@ namespace GitRewrite.IO
                         4 * objectCount,
                         SeekOrigin.Begin);
 
-                    foreach (var largeOffset in largeOffsets.Select(x => x.Hash))
+                    foreach (var largeOffset in largeOffsets)
                     {
                         bufferedStream.Read(buffer, 0, 8);
                         var packOffset = buffer.AsSpan(0, 8);
