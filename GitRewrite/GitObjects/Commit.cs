@@ -69,7 +69,7 @@ namespace GitRewrite.GitObjects
 
         public string GetAuthorName() => Encoding.UTF8.GetString(GetAuthorBytes());
 
-        private ReadOnlySpan<byte> GetContributorName(in ReadOnlyMemory<byte> contributorWithTime)
+        private ReadOnlySpan<byte> GetContributorName(ReadOnlyMemory<byte> contributorWithTime)
         {
             var span = contributorWithTime.Span;
             int spaces = 0;
