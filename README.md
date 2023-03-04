@@ -88,11 +88,11 @@ Please let me know of any issues or feature requests, I will update the tool whe
 Pull requests very welcome! Still searching for a way to make this even faster, maybe some parallelization options that I have not employed yet or faster file acces (while this should be pretty efficient already using memory mapped files)
 
 ## Build instructions
-Currently we are building with .NET Core 3.1, so the SDK should be installed.
+Currently we are building with .NET 7, so the SDK should be installed.
 ```
 git clone https://github.com/TimHeinrich/GitRewrite.git
 cd GitRewrite
-dotnet publish --self-contained -r win-x64 -c Release -p:PublishSingleFile=true GitRewrite
+dotnet publish -c Release
 ```
 
 ## Icon attribution
