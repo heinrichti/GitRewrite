@@ -1,4 +1,7 @@
 # GitRewrite
+> **Note**
+> This project is deprecated in favor of its [rewrite in Rust](https://github.com/heinrichti/gitrw). It will not receive new features or bug fixes.
+
 Rewrite git history.
 
 Faster alternative to git filter-branch or bfg-repo-cleaner to perform certain rewrite tasks.
